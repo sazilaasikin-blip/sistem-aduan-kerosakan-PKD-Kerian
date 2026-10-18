@@ -98,7 +98,7 @@ function route_(b) {
   switch (action) {
     case 'saya': return { user: awam_(s) };
     case 'logout': return logout_(b.token, s);
-    case 'tukarKataLaluan': return tukarKataLaluan_(s, b);
+    case 'tukarKataLaluan': return tukarKataLaluan_(s, b, b.token);
     case 'muat': return muat_(s);
     case 'butiran': return butiran_(s, b);
     case 'daftar': perlu_(s, ['admin', 'pentadbir']); return daftar_(s, b.data || {});
@@ -263,7 +263,7 @@ function login_(b) {
   cache.remove(kunci);
 
   const token = Utilities.getUuid();
-  cache.put('sesi_' + token, JSON.stringify({ email: email }), SESI_SAAT);
+  cache.put('sesi_' + token, JSON.stringify({ email: email, cap: capKataLaluan_(u.Hash) }), SESI_SAAT);
   const col = r.t.head.indexOf('LogMasukTerakhir') + 1;
   r.t.sh.getRange(u._row, col).setValue(nowIso_());
   audit_(email, 'LOGIN', '');
@@ -284,17 +284,24 @@ function awam_(s) {
   return { email: s.email, nama: s.nama, peranan: s.peranan, fasiliti: s.fasiliti, tukarKataLaluan: s.tukar };
 }
 
+/** Cap ringkas hash semasa: jika kata laluan ditukar atau diset semula, cap berubah dan semua sesi lama terbatal */
+function capKataLaluan_(hash) { return String(hash || '').slice(0, 16); }
+
 function requireAuth_(token) {
   if (!token || !/^[0-9a-f-]{36}$/i.test(String(token))) throw appErr_('UNAUTHORIZED', 'Sesi tamat. Sila log masuk semula.');
   const cache = CacheService.getScriptCache();
   const raw = cache.get('sesi_' + token);
   if (!raw) throw appErr_('UNAUTHORIZED', 'Sesi tamat. Sila log masuk semula.');
-  const email = JSON.parse(raw).email;
+  const sesi = JSON.parse(raw);
   // Semak semula akaun setiap permintaan: akaun dinyahaktifkan atau tukar peranan berkuat kuasa serta-merta
-  const u = cariPengguna_(email).u;
+  const u = cariPengguna_(sesi.email).u;
   if (!u || !bool_(u.Aktif) || PERANAN.indexOf(String(u.Peranan).trim().toLowerCase()) === -1) {
     cache.remove('sesi_' + token);
     throw appErr_('UNAUTHORIZED', 'Akaun tidak aktif. Hubungi pentadbir sistem.');
+  }
+  if (!sesi.cap || sesi.cap !== capKataLaluan_(u.Hash)) {
+    cache.remove('sesi_' + token);
+    throw appErr_('UNAUTHORIZED', 'Kata laluan akaun ini telah ditukar. Sila log masuk semula.');
   }
   cache.put('sesi_' + token, raw, SESI_SAAT); // lanjutkan sesi (idle timeout)
   return sesiDari_(u);
@@ -310,7 +317,7 @@ function logout_(token, s) {
   return {};
 }
 
-function tukarKataLaluan_(s, b) {
+function tukarKataLaluan_(s, b, token) {
   const lama = String(b.lama || ''), baru = String(b.baru || '');
   semakPolisi_(baru);
   if (lama === baru) throw appErr_('VALIDATION', 'Kata laluan baharu mesti berbeza daripada yang lama.');
@@ -318,11 +325,14 @@ function tukarKataLaluan_(s, b) {
     const r = cariPengguna_(s.email);
     if (!r.u || !samaRata_(hash_(lama, r.u.Salt), r.u.Hash)) throw appErr_('VALIDATION', 'Kata laluan semasa tidak betul.');
     const salt = saltBaru_();
+    const hashBaru = hash_(baru, salt);
     const h = r.t.head;
     r.t.sh.getRange(r.u._row, h.indexOf('Salt') + 1).setValue(salt);
-    r.t.sh.getRange(r.u._row, h.indexOf('Hash') + 1).setValue(hash_(baru, salt));
+    r.t.sh.getRange(r.u._row, h.indexOf('Hash') + 1).setValue(hashBaru);
     r.t.sh.getRange(r.u._row, h.indexOf('TukarKataLaluan') + 1).setValue(false);
-    audit_(s.email, 'TUKAR_KATA_LALUAN', '');
+    // Sesi lain (peranti lain) terbatal; sesi semasa dikekalkan dengan cap baharu
+    CacheService.getScriptCache().put('sesi_' + token, JSON.stringify({ email: s.email, cap: capKataLaluan_(hashBaru) }), SESI_SAAT);
+    audit_(s.email, 'TUKAR_KATA_LALUAN', 'Sesi lain ditamatkan');
     s.tukar = false;
     return { user: awam_(s) };
   });
@@ -594,7 +604,7 @@ function setSemula_(s, b) {
     r.t.sh.getRange(r.u._row, h.indexOf('Salt') + 1).setValue(salt);
     r.t.sh.getRange(r.u._row, h.indexOf('Hash') + 1).setValue(hash_(temp, salt));
     r.t.sh.getRange(r.u._row, h.indexOf('TukarKataLaluan') + 1).setValue(true);
-    audit_(s.email, 'SET_SEMULA_KATA_LALUAN', email);
+    audit_(s.email, 'SET_SEMULA_KATA_LALUAN', email + ' (semua sesi pengguna ditamatkan)');
     return { kataLaluanSementara: temp, email: email };
   });
 }

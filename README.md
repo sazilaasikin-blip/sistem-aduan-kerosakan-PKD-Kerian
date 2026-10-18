@@ -2,7 +2,7 @@
 
 Sistem untuk pihak pentadbiran mendaftar, memantau dan mengemas kini aduan kerosakan aset, bangunan dan fasiliti di klinik dan unit PKD Kerian.
 
-- **Frontend:** `index.html` (dihoskan di GitHub Pages)
+- **Frontend:** `index.html` + `app.js` (dihoskan di GitHub Pages)
 - **Backend:** `apps-script/Code.gs` (Google Apps Script Web App)
 - **Pangkalan data:** Google Sheet (tab `Aduan`, `Log`, `Pengguna`, `Fasiliti`, `KlinikDesa`, `Rujukan`, `Tetapan`, `Audit`)
 
@@ -30,7 +30,7 @@ Setiap perubahan direkod dalam tab `Log` (siapa, bila, tarikh tindakan, catatan)
 
 1. Log masuk ke akaun Google yang akan memiliki sistem ini.
 2. Cipta Google Sheet baharu. Namakan, contohnya `DB Aduan Kerosakan PKD Kerian`.
-3. **Jangan** guna *File > Share > Publish to web* untuk Sheet ini. Kongsi akses edit Sheet hanya dengan pemilik sistem.
+3. **Jangan** guna *File > Share > Publish to web* untuk Sheet ini, dan pastikan *General access* ialah **Restricted**. Jangan letak Sheet dalam folder yang dikongsi "Anyone with the link" kerana perkongsian folder diwarisi oleh Sheet. Kongsi akses edit hanya dengan pemilik sistem: editor Sheet boleh membuka Apps Script dan membaca kunci rahsia.
 
 ### 2. Pasang kod Apps Script
 
@@ -63,17 +63,18 @@ Setup akan mencipta semua tab, menyembunyikan kolum `Salt` dan `Hash`, dan menja
 
 ### 5. Sambungkan frontend
 
-1. Buka `index.html`, cari baris:
+1. Buka `app.js`, cari baris:
    ```js
    const API_URL = 'TAMPAL_URL_WEB_APP_APPS_SCRIPT_DI_SINI';
    ```
 2. Ganti dengan URL `/exec` dari langkah 4. Simpan.
+3. Jangan pindahkan kod ke dalam `index.html`. Polisi keselamatan (CSP) dalam `index.html` hanya membenarkan skrip daripada fail `app.js` dalam repo yang sama.
 
 ### 6. Publish di GitHub Pages
 
 1. Di github.com: **New repository**, contoh nama `aduan-kerosakan-kerian`.
    - GitHub Pages percuma memerlukan repository **Public**. Kod frontend tidak mengandungi data atau rahsia, jadi ini selamat. Data kekal dalam Google Sheet di sebalik log masuk.
-2. **Add file > Upload files**: muat naik `index.html` (folder `apps-script` dan `README.md` boleh dimuat naik sebagai rujukan; tiada rahsia di dalamnya).
+2. **Add file > Upload files**: muat naik `index.html` dan `app.js` (folder `apps-script` dan `README.md` boleh dimuat naik sebagai rujukan; tiada rahsia di dalamnya).
 3. **Settings > Pages > Build and deployment**: Source = *Deploy from a branch*, Branch = `main`, folder `/ (root)`. Klik **Save**.
 4. Selepas 1–2 minit, sistem boleh dibuka di `https://<nama-pengguna-github>.github.io/aduan-kerosakan-kerian/`.
 
@@ -88,17 +89,18 @@ Setup akan mencipta semua tab, menyembunyikan kolum `Salt` dan `Hash`, dan menja
 ## Kemas kini kod selepas ini
 
 - **Backend (`Code.gs`)**: selepas edit, **Deploy > Manage deployments > ikon pensel > Version: New version > Deploy**. URL kekal sama, jadi `index.html` tidak perlu diubah.
-- **Frontend (`index.html`)**: muat naik semula ke GitHub. Pages dikemas kini dalam 1–2 minit.
+- **Frontend (`index.html`, `app.js`)**: muat naik semula ke GitHub. Pages dikemas kini dalam 1–2 minit.
 
 ## Ciri keselamatan yang dibina
 
 1. Tiada "Publish to web". Semua data melalui Apps Script.
 2. Kata laluan disimpan sebagai hash SHA-256 berulang dengan salt unik setiap pengguna dan pepper rahsia dalam Script Properties.
-3. Token sesi rawak, disemak setiap permintaan, tamat selepas 6 jam tanpa aktiviti, dan dipadam di server semasa log keluar. Token disimpan dalam `sessionStorage` (hilang apabila tab ditutup).
+3. Token sesi rawak, disemak setiap permintaan, tamat selepas 6 jam tanpa aktiviti, dan dipadam di server semasa log keluar. Token disimpan dalam `sessionStorage` (hilang apabila tab ditutup). Tukar atau set semula kata laluan menamatkan semua sesi lain pengguna itu serta-merta.
 4. Peranan, status akaun dan skop fasiliti disemak di server pada setiap permintaan. Akaun yang dinyahaktifkan terus tidak boleh digunakan.
 5. Had percubaan log masuk: 8 kali dalam 5 minit bagi setiap emel.
 6. Input dibersihkan sebelum ditulis ke Sheet dan CSV (elak formula injection). Paparan menggunakan `textContent` (elak XSS).
-7. Tab `Audit` merekod log masuk, pendaftaran, kemas kini, pemadaman dan perubahan pengguna.
+7. Content-Security-Policy dalam `index.html`: skrip hanya dimuatkan dari `app.js`, dan data hanya boleh dihantar ke Apps Script.
+8. Tab `Audit` merekod log masuk, pendaftaran, kemas kini, pemadaman dan perubahan pengguna.
 
 ## Perkara yang perlu diputuskan atau disemak
 
@@ -106,7 +108,6 @@ Setup akan mencipta semua tab, menyembunyikan kolum `Salt` dan `Hash`, dan menja
 - **Data peribadi** yang disimpan adalah minimum: nama dan emel pengguna, serta nama pegawai yang melaporkan. Jangan masukkan maklumat pesakit dalam keterangan aduan.
 - **Tempoh simpanan.** Cadangan: simpan aduan aktif dalam Sheet, eksport CSV dan arkibkan aduan yang selesai melebihi 2 tahun. Sahkan tempoh mengikut keperluan rekod jabatan.
 - **Backup.** Buat salinan Sheet secara berkala (File > Make a copy) atau bergantung pada Version history.
-- **Set semula kata laluan** tidak menamatkan sesi yang sedang aktif bagi pengguna itu. Jika akaun disyaki digunakan orang lain, nyahaktifkan akaun dahulu (berkuat kuasa serta-merta), kemudian aktifkan semula selepas set semula kata laluan.
 
 ## Had teknikal
 
