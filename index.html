@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Aduan Kerosakan PKD Kerian</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: sticky header + tabs; one working panel per tab; complaint detail in a side drawer (full screen on phone). Complaint numbers styled as yellow maintenance tags. */
+:root{
+  --bg:#eef2f1; --surface:#ffffff; --surface-2:#f6f8f8; --ink:#16262a; --muted:#56686c; --line:#d3dcdb;
+  --accent:#0d6a62; --accent-soft:#dcefec; --on-accent:#ffffff; --tag:#f0c23b; --on-tag:#2a2208;
+  --crit:#b3261e; --crit-soft:#fbe4e1; --warn:#9a5b00; --warn-soft:#fbefd9; --ok:#1f7a3e; --ok-soft:#dff2e5; --info:#2b5c9a; --info-soft:#e1ebf7; --mute-soft:#e8edec;
+  --shadow:0 10px 30px rgba(16,34,38,.16);
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0f1719; --surface:#162124; --surface-2:#1b282b; --ink:#e3ecea; --muted:#94a6a7; --line:#2a3b3e;
+  --accent:#4fb9ad; --accent-soft:#183a37; --on-accent:#0b1b19; --tag:#e9bb36; --on-tag:#231c05;
+  --crit:#f07a6f; --crit-soft:#3a1d1b; --warn:#e6a64b; --warn-soft:#352813; --ok:#6cc58a; --ok-soft:#173022; --info:#86b3ea; --info-soft:#1a2a3d; --mute-soft:#22302f;
+  --shadow:0 10px 30px rgba(0,0,0,.45); color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;padding-bottom:env(safe-area-inset-bottom,0px)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.top .wrap{display:flex;flex-wrap:wrap;align-items:flex-end;gap:4px 24px;padding-block:12px 0}
+.brand{display:flex;flex-direction:column;padding-bottom:8px;min-width:0;flex:1 1 280px}
+.brand small,.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.brand h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1.1;text-wrap:balance}
+.who{display:flex;align-items:center;gap:10px;font-size:13px;padding-bottom:8px;flex-wrap:wrap}
+.who b{font-weight:600}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex-basis:100%}
+nav.tabs::-webkit-scrollbar{display:none}
+.tab{appearance:none;border:0;background:none;color:var(--muted);font:600 15px/1 var(--f-body);padding:12px 14px 13px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{padding-block:22px 64px}
+.banner{border:1px solid var(--warn);background:var(--warn-soft);padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
+h2{font-family:var(--f-display);font-weight:700;font-size:22px;margin:0}
+h3{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0}
+.muted{color:var(--muted)}
+.section{display:flex;flex-direction:column;gap:14px;margin-bottom:28px}
+.section-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,input,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-width:0;width:100%}
+.controls select,.controls input{width:auto}
+textarea{resize:vertical}
+label.f{display:flex;flex-direction:column;gap:5px;font-weight:600;font-size:14px;min-width:0}
+.hint{font-weight:400;color:var(--muted);font-size:13px}
+.req{color:var(--crit)}
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 14px/1 var(--f-body);padding:10px 14px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.danger{color:var(--crit);border-color:var(--crit)}
+.btn.small{padding:6px 10px;font-size:13px}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.err{color:var(--crit);font-size:13px;font-weight:500}
+
+/* Login */
+.auth{min-height:100vh;display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-left,0px))}
+.auth-card{width:min(420px,100%);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:26px 24px;display:flex;flex-direction:column;gap:16px;box-shadow:var(--shadow)}
+.auth-card h1{margin:0;font-family:var(--f-display);font-size:28px;line-height:1.1}
+.notice{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;line-height:1.45}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;border-top:4px solid var(--line)}
+.kpi .n{font-family:var(--f-display);font-weight:700;font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:14px;font-weight:600}
+.kpi .s{font-size:12.5px;color:var(--muted)}
+.kpi.crit{border-top-color:var(--crit)} .kpi.crit .n{color:var(--crit)}
+.kpi.warn{border-top-color:var(--warn)} .kpi.warn .n{color:var(--warn)}
+.kpi.ok{border-top-color:var(--ok)} .kpi.info{border-top-color:var(--info)}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:16px}
+@media (max-width:820px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.bars{display:flex;flex-direction:column;gap:12px}
+.bar-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;font-size:14px}
+.bar-row .track{grid-column:1/-1;height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden;display:flex;border:1px solid var(--line)}
+.seg-open{background:var(--warn)} .seg-done{background:var(--accent)}
+.bar-row .v{font-variant-numeric:tabular-nums;color:var(--muted)}
+.legend{display:flex;gap:14px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.num,th.num{text-align:right}
+.note{font-size:12.5px;color:var(--muted);line-height:1.45;max-width:110ch;margin:0}
+
+/* Senarai */
+.filters{display:grid;grid-template-columns:minmax(180px,1.6fr) repeat(5,minmax(120px,1fr));gap:8px}
+@media (max-width:980px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}.filters .q{grid-column:1/-1}}
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:150px minmax(0,1.3fr) minmax(0,1.4fr) 110px 130px 64px;gap:6px 14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:12px 14px;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
+.row:hover{border-color:var(--accent)}
+.row.p-Kritikal{border-left-color:var(--crit)} .row.p-Tinggi{border-left-color:var(--warn)}
+.row .c{min-width:0;display:flex;flex-direction:column;gap:2px}
+.t1{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t2{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.age{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.age small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.age.late{color:var(--crit)}
+@media (max-width:820px){.row{grid-template-columns:minmax(0,1fr) auto}.row .c-fas,.row .c-kat{grid-column:1/-1}.row .c-pri{grid-column:1}.row .c-sts{grid-column:2;justify-self:end}.row .age{grid-row:1;grid-column:2}}
+.tagno{font-family:var(--f-mono);font-weight:500;font-size:12.5px;background:var(--tag);color:var(--on-tag);padding:2px 7px 2px 11px;border-radius:3px;position:relative;display:inline-block;width:max-content}
+.tagno::before{content:"";position:absolute;left:3px;top:50%;width:4px;height:4px;margin-top:-2px;border-radius:50%;background:var(--surface)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:999px;width:max-content;white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.s-Baru{background:var(--info-soft);color:var(--info)}
+.s-Dirujuk,.s-Dalam{background:var(--warn-soft);color:var(--warn)}
+.s-Selesai{background:var(--ok-soft);color:var(--ok)}
+.s-Dibatalkan{background:var(--mute-soft);color:var(--muted)}
+.pr{font-size:12.5px;font-weight:600;padding:2px 8px;border-radius:4px;border:1px solid currentColor;width:max-content}
+.pr-Kritikal{color:var(--crit);background:var(--crit-soft)} .pr-Tinggi{color:var(--warn)} .pr-Biasa{color:var(--muted)}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:28px 20px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center}
+
+/* Borang */
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:20px;max-width:880px}
+.form .full{grid-column:1/-1}
+@media (max-width:640px){.form{grid-template-columns:minmax(0,1fr);padding:16px}}
+.prio{display:flex;flex-wrap:wrap;gap:8px}
+.prio label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:6px;padding:9px 12px;cursor:pointer;font-size:14px;flex:1 1 200px}
+.prio label b{display:block}
+.prio label span span{color:var(--muted);font-size:12.5px}
+.prio input{width:auto;margin-top:4px}
+.prio label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.form-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.inline-note{font-size:13px;padding:8px 10px;border-radius:6px;background:var(--crit-soft);border-left:3px solid var(--crit)}
+
+/* Drawer */
+.scrim{position:fixed;inset:0;background:rgba(10,20,22,.45);z-index:40}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--bg);z-index:41;box-shadow:var(--shadow);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.drawer-head{display:flex;align-items:center;gap:10px;padding:14px 18px;background:var(--surface);border-bottom:1px solid var(--line)}
+.drawer-head .x{margin-left:auto}
+.drawer-body{overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:18px}
+.kv{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 12px;font-size:14px;margin:0}
+.kv dt{color:var(--muted)} .kv dd{margin:0;overflow-wrap:anywhere}
+@media (max-width:480px){.kv{grid-template-columns:minmax(0,1fr)}.kv dd{margin-bottom:6px}}
+.desc{white-space:pre-wrap;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-size:14px;overflow-wrap:anywhere}
+.timeline{list-style:none;margin:0;padding:0 0 0 14px;border-left:2px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.timeline li{position:relative;font-size:14px}
+.timeline li::before{content:"";position:absolute;left:-20px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--accent)}
+.meta{font-size:12.5px;color:var(--muted)}
+.upd{display:flex;flex-direction:column;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+@media (max-width:480px){.two{grid-template-columns:minmax(0,1fr)}}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--crit-soft);padding:10px 12px;border-radius:6px;font-size:14px}
+
+/* Pengguna & tetapan */
+.set-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:980px}
+@media (max-width:720px){.set-grid{grid-template-columns:minmax(0,1fr)}}
+.secret{font-family:var(--f-mono);font-size:16px;background:var(--tag);color:var(--on-tag);padding:6px 10px;border-radius:4px;user-select:all;width:max-content;max-width:100%;overflow-wrap:anywhere}
+.secret-box{background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:8px;max-width:640px}
+.role{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:6px;font-size:14px;z-index:60;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+.loading{opacity:.6;pointer-events:none}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}to{transform:none;opacity:1}}}
+</style>
+</head>
+<body>
+
+<!-- ============ LOG MASUK ============ -->
+<section id="screen-login" class="auth" hidden>
+  <form class="auth-card" id="login-form" novalidate>
+    <div><div class="eyebrow">Pejabat Kesihatan Daerah Kerian</div><h1>Aduan Kerosakan Aset &amp; Fasiliti</h1></div>
+    <div id="cfg-warn" class="banner" hidden>URL backend belum ditetapkan. Kemas kini <code>API_URL</code> dalam index.html.</div>
+    <label class="f">Emel rasmi<input type="email" id="lg-email" autocomplete="username" required></label>
+    <label class="f">Kata laluan<input type="password" id="lg-pw" autocomplete="current-password" required></label>
+    <div class="form-actions"><button class="btn primary" type="submit" id="lg-btn">Log masuk</button><span class="err" id="lg-err" role="alert"></span></div>
+    <p class="notice">Sistem dalaman untuk merekod dan memantau aduan kerosakan aset, bangunan dan fasiliti di klinik dan unit PKD Kerian. Data yang disimpan: nama dan emel pengguna, nama pegawai yang melaporkan, dan maklumat kerosakan. Data hanya digunakan untuk pengurusan pembaikan dan pelaporan dalaman, dan hanya boleh diakses oleh pengguna berdaftar mengikut peranan. Lupa kata laluan: hubungi pentadbir sistem.</p>
+  </form>
+</section>
+
+<!-- ============ TUKAR KATA LALUAN ============ -->
+<section id="screen-tukar" class="auth" hidden>
+  <form class="auth-card" id="pw-form" novalidate>
+    <div><div class="eyebrow">Keselamatan akaun</div><h1>Tukar kata laluan</h1></div>
+    <p class="muted" style="margin:0" id="pw-intro">Anda menggunakan kata laluan sementara. Tetapkan kata laluan baharu sebelum meneruskan.</p>
+    <label class="f">Kata laluan semasa<input type="password" id="pw-lama" autocomplete="current-password"></label>
+    <label class="f">Kata laluan baharu<input type="password" id="pw-baru" autocomplete="new-password"><span class="hint">Minimum 10 aksara, mengandungi huruf dan nombor.</span></label>
+    <label class="f">Ulang kata laluan baharu<input type="password" id="pw-ulang" autocomplete="new-password"></label>
+    <div class="form-actions"><button class="btn primary" type="submit" id="pw-btn">Simpan</button><button class="btn" type="button" id="pw-batal">Log keluar</button><span class="err" id="pw-err" role="alert"></span></div>
+  </form>
+</section>
+
+<!-- ============ APLIKASI ============ -->
+<div id="screen-app" hidden>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><small>Pejabat Kesihatan Daerah Kerian</small><h1>Aduan Kerosakan Aset &amp; Fasiliti</h1></div>
+    <div class="who"><span><b id="who-nama"></b> · <span class="role" id="who-role"></span></span>
+      <button class="btn small" type="button" id="btn-refresh">Muat semula</button>
+      <button class="btn small" type="button" id="btn-pw">Kata laluan</button>
+      <button class="btn small" type="button" id="btn-logout">Log keluar</button></div>
+    <nav class="tabs" role="tablist" aria-label="Menu utama">
+      <button class="tab" role="tab" data-view="ringkasan" aria-selected="true">Ringkasan</button>
+      <button class="tab" role="tab" data-view="senarai" aria-selected="false">Senarai Aduan</button>
+      <button class="tab" role="tab" data-view="daftar" aria-selected="false" data-perlu="tulis">Daftar Aduan</button>
+      <button class="tab" role="tab" data-view="pengguna" aria-selected="false" data-perlu="admin">Pengguna</button>
+      <button class="tab" role="tab" data-view="tetapan" aria-selected="false" data-perlu="admin">Tetapan</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <div id="banner" class="banner" hidden></div>
+
+  <!-- RINGKASAN -->
+  <section id="v-ringkasan" data-v>
+    <div class="section">
+      <div class="section-head">
+        <div><div class="eyebrow" id="skop-label">Status semasa · semua aduan</div><h2>Kerosakan yang belum selesai</h2></div>
+        <div class="muted" id="as-of" style="font-size:13px"></div>
+      </div>
+      <div class="kpis" id="kpi-now"></div>
+    </div>
+    <div class="section">
+      <div class="section-head">
+        <div><div class="eyebrow">Prestasi mengikut tempoh aduan diterima</div><h2 id="period-title">Tempoh</h2></div>
+        <div class="controls"><select id="r-bulan" aria-label="Bulan"></select><select id="r-tahun" aria-label="Tahun"></select></div>
+      </div>
+      <div class="kpis" id="kpi-period"></div>
+      <div class="grid2">
+        <div class="panel"><h3>Mengikut kategori</h3>
+          <div class="legend"><span><i style="background:var(--warn)"></i>Masih terbuka</span><span><i style="background:var(--accent)"></i>Selesai</span></div>
+          <div class="bars" id="by-kat"></div></div>
+        <div class="panel"><h3>Mengikut fasiliti / unit</h3><div class="tbl-wrap"><table id="by-fas"></table></div></div>
+      </div>
+      <p class="note">Definisi: Tempoh ditentukan oleh tarikh aduan diterima. Kadar selesai = aduan dalam tempoh yang berstatus Selesai ÷ aduan dalam tempoh (tidak termasuk Dibatalkan) × 100. Hari selesai = tarikh selesai − tarikh aduan diterima. Median hanya mengambil kira aduan yang telah selesai, jadi baca bersama bilangan aduan yang masih terbuka. Bilangan kecil (contohnya kurang 10 aduan sebulan) tidak sesuai untuk perbandingan peratus antara fasiliti.</p>
+    </div>
+  </section>
+
+  <!-- SENARAI -->
+  <section id="v-senarai" data-v hidden>
+    <div class="section">
+      <div class="section-head">
+        <div><div class="eyebrow">Daftar aduan</div><h2>Senarai aduan <span class="muted" id="list-count"></span></h2></div>
+        <div class="controls">
+          <select id="l-sort" aria-label="Susunan"><option value="baru">Terbaru dahulu</option><option value="umur">Paling lama terbuka</option><option value="prio">Keutamaan</option></select>
+          <button class="btn" id="btn-csv" type="button">Muat turun CSV</button>
+        </div>
+      </div>
+      <div class="filters">
+        <input class="q" id="l-q" type="search" placeholder="Cari no. aduan, lokasi, no. aset, keterangan…" aria-label="Carian">
+        <select id="l-status" aria-label="Status"></select>
+        <select id="l-kat" aria-label="Kategori"></select>
+        <select id="l-fas" aria-label="Fasiliti"></select>
+        <select id="l-pri" aria-label="Keutamaan"></select>
+        <select id="l-tahun" aria-label="Tahun aduan"></select>
+      </div>
+      <div class="list" id="list"></div>
+    </div>
+  </section>
+
+  <!-- DAFTAR -->
+  <section id="v-daftar" data-v hidden>
+    <div class="section">
+      <div><div class="eyebrow">Aduan baharu</div><h2>Daftar aduan kerosakan</h2></div>
+      <p class="muted" style="margin:0;max-width:70ch">Untuk kerosakan aset, bangunan dan fasiliti sahaja. Aduan perkhidmatan, pelanggan, klinikal atau sumber manusia tidak didaftarkan di sini.</p>
+      <form class="form" id="form" novalidate>
+        <label class="f">Tarikh aduan diterima <span class="req">*</span><input type="date" id="f-tarikh"></label>
+        <label class="f">Fasiliti / unit <span class="req">*</span><select id="f-fasiliti"></select><span class="hint" id="fas-hint" hidden></span></label>
+        <label class="f full">Lokasi kerosakan <span class="req">*</span><input type="text" id="f-lokasi" maxlength="120" placeholder="Contoh: Bilik Rawatan 2, tandas pesakit wanita, ruang menunggu KKIA"></label>
+        <label class="f">Kategori <span class="req">*</span><select id="f-kat"></select></label>
+        <label class="f" id="sub-wrap">Jenis kerosakan <span class="req">*</span><select id="f-sub"></select></label>
+        <div class="full inline-note" id="cold-note" hidden>Kerosakan peti sejuk vaksin atau cold chain: keutamaan ditetapkan sebagai Kritikal. Pastikan pelan kontingensi penyimpanan vaksin dijalankan serta-merta.</div>
+        <label class="f">No. siri / no. pendaftaran aset<input type="text" id="f-aset" maxlength="60" placeholder="Jika ada"><span class="hint">Boleh dibiarkan kosong untuk kerosakan bangunan.</span></label>
+        <label class="f">Dilaporkan oleh (pegawai di fasiliti)<input type="text" id="f-pelapor" maxlength="80" placeholder="Nama dan jawatan"></label>
+        <label class="f full">Keterangan kerosakan <span class="req">*</span><textarea id="f-ket" rows="4" maxlength="1500" placeholder="Apa yang rosak, sejak bila, kesan kepada perkhidmatan"></textarea><span class="hint" id="ket-hint">Minimum 15 aksara.</span></label>
+        <div class="full" role="radiogroup" aria-labelledby="prio-lbl" style="display:flex;flex-direction:column;gap:6px">
+          <span id="prio-lbl" style="font-weight:600;font-size:14px">Tahap keutamaan <span class="req">*</span></span>
+          <div class="prio">
+            <label><input type="radio" name="prio" value="Kritikal" id="p-krit"><span><b>Kritikal</b><span>Perkhidmatan terhenti atau risiko keselamatan. Cold chain, bekalan air/elektrik terputus.</span></span></label>
+            <label><input type="radio" name="prio" value="Tinggi" id="p-tinggi"><span><b>Tinggi</b><span>Sebahagian perkhidmatan terjejas atau ada alternatif sementara.</span></span></label>
+            <label><input type="radio" name="prio" value="Biasa" id="p-biasa" checked><span><b>Biasa</b><span>Tidak menjejaskan perkhidmatan secara langsung.</span></span></label>
+          </div>
+        </div>
+        <div class="full form-actions"><button class="btn primary" type="submit" id="f-submit">Daftar aduan</button><button class="btn" type="button" id="f-reset">Kosongkan</button><span class="err" id="f-err" role="alert"></span></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- PENGGUNA -->
+  <section id="v-pengguna" data-v hidden>
+    <div class="section">
+      <div class="section-head"><div><div class="eyebrow">Pentadbir sistem</div><h2>Pengguna</h2></div></div>
+      <p class="note">Admin: semua fasiliti, urus pengguna dan tetapan. Pentadbir fasiliti: daftar dan kemas kini aduan untuk fasiliti sendiri sahaja. Pemantau: lihat semua aduan, tidak boleh mengubah.</p>
+      <div id="pw-reveal"></div>
+      <div class="panel"><div class="tbl-wrap"><table id="tbl-pengguna"></table></div></div>
+      <form class="form" id="u-form" novalidate>
+        <h3 class="full" id="u-title">Tambah pengguna</h3>
+        <label class="f">Emel rasmi <span class="req">*</span><input type="email" id="u-email" maxlength="120"></label>
+        <label class="f">Nama <span class="req">*</span><input type="text" id="u-nama" maxlength="80"></label>
+        <label class="f">Peranan <span class="req">*</span><select id="u-peranan"><option value="pentadbir">Pentadbir fasiliti</option><option value="pemantau">Pemantau</option><option value="admin">Admin</option></select></label>
+        <label class="f" id="u-fas-wrap">Fasiliti <span class="req">*</span><select id="u-fasiliti"></select></label>
+        <label class="f full" style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" id="u-aktif" checked style="width:auto"> Akaun aktif</label>
+        <div class="full form-actions"><button class="btn primary" type="submit" id="u-save">Tambah pengguna</button><button class="btn" type="button" id="u-cancel" hidden>Batal edit</button><span class="err" id="u-err" role="alert"></span></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- TETAPAN -->
+  <section id="v-tetapan" data-v hidden>
+    <div class="section">
+      <div><div class="eyebrow">Pentadbir sistem</div><h2>Tetapan</h2></div>
+      <div class="set-grid">
+        <label class="f panel">Senarai fasiliti / unit<span class="hint">Satu nama setiap baris. Jika nama ditukar, aduan lama kekal dengan nama asal.</span><textarea id="s-fas" rows="12"></textarea></label>
+        <div class="panel">
+          <label class="f">Pihak rujukan tindakan<span class="hint">Satu setiap baris. Dicadangkan semasa kemas kini status.</span><textarea id="s-ruj" rows="6"></textarea></label>
+          <label class="f">Had hari aduan dianggap lewat<input type="number" id="s-had" min="1" max="365" step="1" style="max-width:120px"><span class="hint">Aduan terbuka melebihi had ini ditanda merah.</span></label>
+        </div>
+      </div>
+      <div class="form-actions"><button class="btn primary" id="s-save" type="button">Simpan tetapan</button><span class="err" id="s-err" role="alert"></span></div>
+    </div>
+  </section>
+</main>
+</div>
+
+<div id="scrim" class="scrim" hidden></div>
+<aside id="drawer" class="drawer" hidden aria-modal="true" role="dialog" aria-labelledby="d-title">
+  <div class="drawer-head"><span class="tagno" id="d-no"></span><h3 id="d-title" style="font-size:17px">Butiran aduan</h3><button class="btn x" id="d-close" type="button">Tutup</button></div>
+  <div class="drawer-body"><div id="d-info"></div><div id="d-log"></div><div id="d-upd"></div><div id="d-del"></div></div>
+</aside>
+<div id="toast" class="toast" hidden role="status"></div>
+
+<script>
+/* =========================================================
+ * KONFIGURASI — tampal URL Web App Apps Script (berakhir dengan /exec)
+ * URL ini bukan rahsia; semua data dilindungi oleh log masuk dan token sesi di server.
+ * ========================================================= */
+const API_URL = 'TAMPAL_URL_WEB_APP_APPS_SCRIPT_DI_SINI';
+
+(() => {
+'use strict';
+const TZ = 'Asia/Kuala_Lumpur';
+const KATEGORI = [
+  {k:'1', n:'Kerosakan Bangunan dan Fasiliti', s:['Bumbung dan siling','Dinding dan lantai','Pintu dan tingkap','Tandas','Paip, saliran, tangki air dan kebocoran','Pendawaian, lampu, soket dan suis','Pendingin hawa, kipas dan pengudaraan','Longkang, pagar, laluan dan parkir','Ruang menunggu dan struktur luar bangunan']},
+  {k:'2', n:'Aset dan Peralatan Bukan Klinikal', s:['Perabot (meja, kerusi, kabinet, rak)','Mesin fotostat dan projektor','Telefon, sistem PA dan CCTV','Peti sejuk (bukan vaksin) dan dispenser air','Mesin nombor giliran','Peralatan pejabat lain']},
+  {k:'3', n:'Aset dan Peralatan Klinikal', s:['Katil pemeriksaan, troli, kerusi roda, stretcher','Timbangan, BP set, nebulizer, glucometer','Peralatan pergigian','Peralatan makmal','Peralatan farmasi','Peti sejuk vaksin / cold chain','Peralatan klinikal lain']},
+  {k:'4', n:'ICT dan Sistem Berkaitan Aset', s:['Komputer atau laptop','Monitor, papan kekunci, tetikus','UPS','Pencetak atau pengimbas','Rangkaian Internet / LAN','Sistem aplikasi tidak boleh diakses (akibat peralatan/rangkaian fasiliti)','Peralatan ICT lain']},
+  {k:'5', n:'Lain-lain Kerosakan Aset atau Fasiliti', s:['Lain-lain']}
+];
+const COLD = 'Peti sejuk vaksin / cold chain';
+const STATUS = ['Baru','Dirujuk','Dalam Tindakan','Selesai','Dibatalkan'];
+const OPEN = new Set(['Baru','Dirujuk','Dalam Tindakan']);
+const PRIO = ['Kritikal','Tinggi','Biasa'];
+const BULAN = ['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
+const PERANAN_LABEL = {admin:'Admin', pentadbir:'Pentadbir fasiliti', pemantau:'Pemantau'};
+const katName = k => (KATEGORI.find(x=>x.k===String(k))||{n:'—'}).n;
+
+/* ---------- Utiliti ---------- */
+const $ = id => document.getElementById(id);
+function h(tag, attrs, ...kids){
+  const el = document.createElement(tag);
+  if (attrs) for (const [k,v] of Object.entries(attrs)) {
+    if (v==null || v===false) continue;
+    if (k==='class') el.className = v;
+    else if (k.startsWith('on') && typeof v==='function') el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v===true ? '' : v);
+  }
+  for (const c of kids.flat()) { if (c==null || c===false) continue; el.append(c instanceof Node ? c : document.createTextNode(String(c))); }
+  return el;
+}
+const opt = (v,t,sel) => h('option',{value:v, selected:sel||null}, t);
+const todayStr = () => new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const fmtD = s => { if(!s) return '—'; const [y,m,d]=String(s).slice(0,10).split('-'); return d?`${d}/${m}/${y}`:String(s); };
+const fmtDT = iso => { if(!iso) return '—'; const dt=new Date(iso); if(isNaN(dt)) return String(iso); const p=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(dt); const g=t=>(p.find(x=>x.type===t)||{}).value; return `${g('day')}/${g('month')}/${g('year')} ${g('hour')}:${g('minute')}`; };
+const dayNum = s => { const [y,m,d]=String(s).slice(0,10).split('-').map(Number); return Date.UTC(y,m-1,d)/864e5; };
+const umur = a => { if(!a.tarikh) return 0; const end = a.status==='Selesai' && a.tarikhSelesai ? a.tarikhSelesai : todayStr(); return Math.max(0, Math.round(dayNum(end)-dayNum(a.tarikh))); };
+const median = arr => { if(!arr.length) return null; const s=[...arr].sort((a,b)=>a-b), m=Math.floor(s.length/2); return s.length%2 ? s[m] : (s[m-1]+s[m])/2; };
+const stCls = s => 's-' + String(s).split(' ')[0];
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true, 3500); }
+function banner(msg){ $('banner').textContent=msg||''; $('banner').hidden=!msg; }
+
+/* ---------- Token (sessionStorage: hilang bila tab ditutup) ---------- */
+const TK='aduan_krn_token';
+const getToken = () => { try{ return sessionStorage.getItem(TK)||''; }catch(e){ return memToken; } };
+let memToken='';
+const setToken = t => { memToken=t; try{ sessionStorage.setItem(TK,t); }catch(e){} };
+const clearToken = () => { memToken=''; try{ sessionStorage.removeItem(TK); }catch(e){} };
+
+/* ---------- API ---------- */
+const configured = () => /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(API_URL);
+async function api(action, payload){
+  if (!configured()) throw Object.assign(new Error('URL backend belum ditetapkan.'), {code:'CONFIG'});
+  let res;
+  try{
+    res = await fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(Object.assign({action, token:getToken()}, payload||{}))});
+  }catch(e){ throw Object.assign(new Error('Tidak dapat menghubungi pelayan. Semak sambungan Internet.'), {code:'NETWORK'}); }
+  let j; try{ j = await res.json(); }catch(e){ throw Object.assign(new Error('Jawapan pelayan tidak sah. Semak tetapan deployment Apps Script.'), {code:'BAD_RESPONSE'}); }
+  if (!j.ok){
+    if (j.code==='UNAUTHORIZED'){ clearToken(); ME=null; showLogin(j.error); }
+    else if (j.code==='PASSWORD_CHANGE'){ showTukar(true); }
+    throw Object.assign(new Error(j.error||'Ralat tidak diketahui.'), {code:j.code});
+  }
+  return j;
+}
+
+/* ---------- State ---------- */
+let ME=null, ADUAN=[], TET={fasiliti:[], rujukan:[], hadHari:14}, PENGGUNA=[], openNo=null, editEmail=null;
+const had = () => Number(TET.hadHari)||14;
+const isAdmin = () => ME && ME.peranan==='admin';
+const bolehTulis = () => ME && (ME.peranan==='admin' || ME.peranan==='pentadbir');
+
+/* ---------- Skrin ---------- */
+function screen(id){ ['screen-login','screen-tukar','screen-app'].forEach(s=>$(s).hidden = s!==id); }
+function showLogin(msg){ closeDrawer(); screen('screen-login'); $('cfg-warn').hidden = configured(); $('lg-err').textContent = msg||''; $('lg-pw').value=''; setTimeout(()=>$('lg-email').focus(),0); }
+function showTukar(wajib){ screen('screen-tukar'); $('pw-intro').textContent = wajib ? 'Anda menggunakan kata laluan sementara. Tetapkan kata laluan baharu sebelum meneruskan.' : 'Tukar kata laluan akaun anda.'; $('pw-batal').textContent = wajib ? 'Log keluar' : 'Batal'; $('pw-batal').dataset.wajib = wajib?'1':''; ['pw-lama','pw-baru','pw-ulang'].forEach(i=>$(i).value=''); $('pw-err').textContent=''; setTimeout(()=>$('pw-lama').focus(),0); }
+
+function show(view){
+  const tab = document.querySelector(`.tab[data-view="${view}"]`);
+  if (!tab || tab.hidden) view='ringkasan';
+  document.querySelectorAll('[data-v]').forEach(s=>s.hidden = s.id!=='v-'+view);
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected', String(t.dataset.view===view)));
+  try{ sessionStorage.setItem('aduan_tab', view); }catch(e){}
+  if (view==='pengguna') muatPengguna();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>show(t.dataset.view)));
+
+/* ---------- Login / logout ---------- */
+$('login-form').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const btn=$('lg-btn'), err=$('lg-err'); err.textContent='';
+  const email=$('lg-email').value.trim(), pw=$('lg-pw').value;
+  if (!email || !pw){ err.textContent='Masukkan emel dan kata laluan.'; return; }
+  btn.disabled=true; btn.textContent='Menyemak…';
+  try{
+    const r = await api('login',{email, password:pw});
+    setToken(r.token); ME=r.user; $('lg-pw').value='';
+    if (ME.tukarKataLaluan) showTukar(true); else await mulaApp();
+  }catch(ex){ err.textContent = ex.message; }
+  finally{ btn.disabled=false; btn.textContent='Log masuk'; }
+});
+async function logout(){
+  try{ if (getToken()) await api('logout'); }catch(e){}
+  clearToken(); ME=null; ADUAN=[]; PENGGUNA=[]; showLogin('Anda telah log keluar.');
+}
+$('btn-logout').addEventListener('click', logout);
+$('btn-pw').addEventListener('click', ()=>showTukar(false));
+$('pw-batal').addEventListener('click', ()=>{ if ($('pw-batal').dataset.wajib) logout(); else screen('screen-app'); });
+$('pw-form').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const err=$('pw-err'); err.textContent='';
+  const lama=$('pw-lama').value, baru=$('pw-baru').value, ulang=$('pw-ulang').value;
+  if (!lama || !baru){ err.textContent='Lengkapkan semua ruangan.'; return; }
+  if (baru!==ulang){ err.textContent='Kata laluan baharu tidak sepadan.'; return; }
+  if (baru.length<10 || !/[A-Za-z]/.test(baru) || !/\d/.test(baru)){ err.textContent='Minimum 10 aksara, mengandungi huruf dan nombor.'; return; }
+  const btn=$('pw-btn'); btn.disabled=true;
+  try{ const r=await api('tukarKataLaluan',{lama, baru}); ME=r.user; toast('Kata laluan dikemas kini.'); await mulaApp(); }
+  catch(ex){ if(ex.code!=='UNAUTHORIZED') err.textContent=ex.message; }
+  finally{ btn.disabled=false; }
+});
+
+/* ---------- Muat data ---------- */
+async function muat(){
+  const r = await api('muat');
+  ME=r.user; ADUAN=r.aduan||[]; TET=Object.assign({fasiliti:[],rujukan:[],hadHari:14}, r.tetapan||{});
+  renderAll();
+}
+async function mulaApp(){
+  screen('screen-app');
+  $('who-nama').textContent = ME.nama || ME.email;
+  $('who-role').textContent = PERANAN_LABEL[ME.peranan] + (ME.peranan==='pentadbir' && ME.fasiliti ? ' · '+ME.fasiliti : '');
+  document.querySelectorAll('.tab').forEach(t=>{ const p=t.dataset.perlu; t.hidden = (p==='admin' && !isAdmin()) || (p==='tulis' && !bolehTulis()); });
+  $('skop-label').textContent = ME.peranan==='pentadbir' ? `Status semasa · ${ME.fasiliti}` : 'Status semasa · semua fasiliti';
+  $('main').classList.add('loading');
+  try{ await muat(); banner(''); }catch(ex){ if(ex.code!=='UNAUTHORIZED' && ex.code!=='PASSWORD_CHANGE') banner(ex.message); }
+  finally{ $('main').classList.remove('loading'); }
+  let v='ringkasan'; try{ v=sessionStorage.getItem('aduan_tab')||v; }catch(e){}
+  show(v);
+}
+$('btn-refresh').addEventListener('click', async ()=>{
+  const b=$('btn-refresh'); b.disabled=true;
+  try{ await muat(); toast('Data dikemas kini.'); if(openNo) bukaButiran(openNo, true); }catch(ex){ if(ex.code!=='UNAUTHORIZED') toast(ex.message); }
+  finally{ b.disabled=false; }
+});
+
+/* ---------- Pilihan statik ---------- */
+function fillYears(sel, withAll){
+  const cur = Number(todayStr().slice(0,4));
+  const ys = new Set([cur]); ADUAN.forEach(a=>a.tarikh && ys.add(Number(String(a.tarikh).slice(0,4))));
+  const keep = sel.value;
+  sel.replaceChildren(...(withAll?[opt('','Semua tahun')]:[]), ...[...ys].sort((a,b)=>b-a).map(y=>opt(String(y),String(y))));
+  if ([...sel.options].some(o=>o.value===keep)) sel.value=keep; else if(!withAll) sel.value=String(cur);
+}
+$('r-bulan').replaceChildren(opt('','Sepanjang tahun'), ...BULAN.map((b,i)=>opt(String(i+1).padStart(2,'0'), b)));
+$('r-bulan').value = todayStr().slice(5,7);
+$('l-status').replaceChildren(opt('terbuka','Status: Terbuka'), opt('','Status: Semua'), ...STATUS.map(s=>opt(s,'Status: '+s)));
+$('l-kat').replaceChildren(opt('','Semua kategori'), ...KATEGORI.map(k=>opt(k.k, k.k+'. '+k.n)));
+$('l-pri').replaceChildren(opt('','Semua keutamaan'), ...PRIO.map(p=>opt(p,p)));
+$('f-kat').replaceChildren(opt('','Pilih kategori'), ...KATEGORI.map(k=>opt(k.k, k.k+'. '+k.n)));
+
+function fillFasiliti(){
+  const list = TET.fasiliti||[];
+  const fSel=$('f-fasiliti'), keep=fSel.value;
+  if (ME && ME.peranan==='pentadbir'){ fSel.replaceChildren(opt(ME.fasiliti, ME.fasiliti)); fSel.disabled=true; }
+  else { fSel.disabled=false; fSel.replaceChildren(opt('', list.length?'Pilih fasiliti / unit':'Belum ada senarai'), ...list.map(f=>opt(f,f))); if(list.includes(keep)) fSel.value=keep; }
+  const hint=$('fas-hint');
+  if (!list.length){ hint.hidden=false; hint.textContent = isAdmin() ? 'Tambah senarai fasiliti di tab Tetapan dahulu.' : 'Senarai fasiliti belum disediakan. Hubungi pentadbir sistem.'; } else hint.hidden=true;
+  const extra=[...new Set(ADUAN.map(a=>a.fasiliti).filter(f=>f && !list.includes(f)))];
+  const lk=$('l-fas').value;
+  $('l-fas').replaceChildren(opt('','Semua fasiliti'), ...[...list,...extra].map(f=>opt(f,f))); $('l-fas').value=lk;
+  $('l-fas').hidden = ME && ME.peranan==='pentadbir';
+  const uk=$('u-fasiliti').value;
+  $('u-fasiliti').replaceChildren(opt('','Pilih fasiliti'), ...list.map(f=>opt(f,f))); $('u-fasiliti').value=uk;
+}
+
+/* ---------- Ringkasan ---------- */
+const kpi = (cls,n,l,s) => h('div',{class:'kpi '+(cls||'')}, h('div',{class:'n'},n), h('div',{class:'l'},l), s?h('div',{class:'s'},s):null);
+function renderRingkasan(){
+  $('as-of').textContent = 'Setakat ' + fmtD(todayStr());
+  const open=ADUAN.filter(a=>OPEN.has(a.status)), krit=open.filter(a=>a.keutamaan==='Kritikal'), lewat=open.filter(a=>umur(a)>had()), baru=open.filter(a=>a.status==='Baru');
+  $('kpi-now').replaceChildren(
+    kpi('info', open.length, 'Aduan terbuka', `${baru.length} belum diambil tindakan (status Baru)`),
+    kpi(krit.length?'crit':'', krit.length, 'Kritikal masih terbuka', krit.length?'Semak segera':'Tiada'),
+    kpi(lewat.length?'warn':'', lewat.length, `Terbuka melebihi ${had()} hari`, open.length?`${Math.round(lewat.length/open.length*100)}% daripada aduan terbuka`:'—'));
+  const y=$('r-tahun').value, m=$('r-bulan').value;
+  $('period-title').textContent = m ? `${BULAN[Number(m)-1]} ${y}` : `Tahun ${y}`;
+  const inP = ADUAN.filter(a=>a.tarikh && String(a.tarikh).slice(0,4)===y && (!m || String(a.tarikh).slice(5,7)===m));
+  const valid = inP.filter(a=>a.status!=='Dibatalkan'), done=valid.filter(a=>a.status==='Selesai');
+  const med=median(done.map(umur)), pct = valid.length ? Math.round(done.length/valid.length*1000)/10 : null;
+  $('kpi-period').replaceChildren(
+    kpi('', inP.length, 'Aduan diterima', inP.length-valid.length?`${inP.length-valid.length} dibatalkan`:'Tiada pembatalan'),
+    kpi('ok', done.length, 'Telah selesai', `${valid.length-done.length} masih terbuka`),
+    kpi('', pct==null?'—':pct+'%', 'Kadar selesai', 'Selesai ÷ diterima (tolak dibatalkan)'),
+    kpi('', med==null?'—':med, 'Median hari selesai', done.length?`Berdasarkan ${done.length} aduan selesai`:'Belum ada aduan selesai'));
+  const bk=$('by-kat');
+  if (!valid.length) bk.replaceChildren(h('p',{class:'muted',style:'margin:0'},'Tiada aduan dalam tempoh ini.'));
+  else {
+    const max=Math.max(...KATEGORI.map(k=>valid.filter(a=>String(a.kategoriKod)===k.k).length),1);
+    bk.replaceChildren(...KATEGORI.map(k=>{ const all=valid.filter(a=>String(a.kategoriKod)===k.k), o=all.filter(a=>OPEN.has(a.status)).length, d=all.length-o;
+      return h('div',{class:'bar-row'}, h('span',null,`${k.k}. ${k.n}`), h('span',{class:'v'},`${all.length} (${o} terbuka)`),
+        h('div',{class:'track',role:'img','aria-label':`${all.length} aduan, ${o} terbuka`}, h('div',{class:'seg-done',style:`width:${d/max*100}%`}), h('div',{class:'seg-open',style:`width:${o/max*100}%`}))); }));
+  }
+  const fasSet=[...new Set([...(TET.fasiliti||[]), ...valid.map(a=>a.fasiliti)].filter(Boolean))];
+  const rows=fasSet.map(f=>{ const all=valid.filter(a=>a.fasiliti===f), d=all.filter(a=>a.status==='Selesai'); return {f,n:all.length,o:all.length-d.length,d:d.length,med:median(d.map(umur))}; }).filter(r=>r.n>0).sort((a,b)=>b.o-a.o||b.n-a.n);
+  const tbl=$('by-fas');
+  if (!rows.length) tbl.replaceChildren(h('tbody',null,h('tr',null,h('td',{class:'muted'},'Tiada aduan dalam tempoh ini.'))));
+  else tbl.replaceChildren(
+    h('thead',null,h('tr',null,h('th',null,'Fasiliti / unit'),h('th',{class:'num'},'Diterima'),h('th',{class:'num'},'Terbuka'),h('th',{class:'num'},'Selesai'),h('th',{class:'num'},'Median hari'))),
+    h('tbody',null,rows.map(r=>h('tr',null,h('td',null,r.f),h('td',{class:'num'},r.n),h('td',{class:'num'},r.o),h('td',{class:'num'},r.d),h('td',{class:'num'},r.med==null?'—':r.med)))));
+}
+
+/* ---------- Senarai ---------- */
+function filtered(){
+  const q=$('l-q').value.trim().toLowerCase(), st=$('l-status').value, k=$('l-kat').value, f=$('l-fas').value, p=$('l-pri').value, y=$('l-tahun').value;
+  let list=ADUAN.filter(a=>{
+    if (st==='terbuka' ? !OPEN.has(a.status) : (st && a.status!==st)) return false;
+    if (k && String(a.kategoriKod)!==k) return false;
+    if (f && a.fasiliti!==f) return false;
+    if (p && a.keutamaan!==p) return false;
+    if (y && String(a.tarikh).slice(0,4)!==y) return false;
+    if (q && ![a.noAduan,a.lokasi,a.noAset,a.keterangan,a.jenis,a.fasiliti,a.pelapor].join(' ').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const s=$('l-sort').value;
+  if (s==='umur') list=[...list].sort((a,b)=>(OPEN.has(b.status)-OPEN.has(a.status)) || umur(b)-umur(a));
+  if (s==='prio') list=[...list].sort((a,b)=>PRIO.indexOf(a.keutamaan)-PRIO.indexOf(b.keutamaan) || umur(b)-umur(a));
+  return list;
+}
+function renderSenarai(){
+  const box=$('list'), list=filtered();
+  $('list-count').textContent=`(${list.length})`;
+  if (!ADUAN.length){ box.replaceChildren(h('div',{class:'empty'}, h('b',null,'Belum ada aduan didaftarkan'), h('span',{class:'muted'},'Aduan yang didaftarkan akan disenaraikan di sini bersama status dan tempoh terbuka.'), bolehTulis()?h('button',{class:'btn primary',type:'button',onclick:()=>show('daftar')},'Daftar aduan pertama'):null)); return; }
+  if (!list.length){ box.replaceChildren(h('div',{class:'empty'}, h('b',null,'Tiada aduan sepadan dengan tapisan'), h('span',{class:'muted'},'Tukar status kepada "Semua" atau kosongkan carian.'))); return; }
+  box.replaceChildren(...list.map(a=>{ const u=umur(a), late=OPEN.has(a.status)&&u>had();
+    return h('button',{class:`row p-${a.keutamaan}`,type:'button',onclick:()=>bukaButiran(a.noAduan)},
+      h('div',{class:'c'}, h('span',{class:'tagno'},a.noAduan), h('span',{class:'t2'},fmtD(a.tarikh))),
+      h('div',{class:'c c-fas'}, h('span',{class:'t1'},a.fasiliti||'—'), h('span',{class:'t2'},a.lokasi||'')),
+      h('div',{class:'c c-kat'}, h('span',{class:'t1'},a.jenis||katName(a.kategoriKod)), h('span',{class:'t2'},a.keterangan||'')),
+      h('div',{class:'c c-pri'}, h('span',{class:'pr pr-'+a.keutamaan},a.keutamaan)),
+      h('div',{class:'c c-sts'}, h('span',{class:'pill '+stCls(a.status)},a.status)),
+      h('div',{class:'age'+(late?' late':'')}, a.status==='Dibatalkan'?'—':u, h('small',null,a.status==='Selesai'?'hari selesai':(a.status==='Dibatalkan'?'':'hari terbuka')))); }));
+}
+['l-q','l-status','l-kat','l-fas','l-pri','l-tahun','l-sort'].forEach(id=>$(id).addEventListener('input',renderSenarai));
+['r-bulan','r-tahun'].forEach(id=>$(id).addEventListener('input',renderRingkasan));
+
+/* ---------- CSV ---------- */
+const csvCell = v => { let s=v==null?'':String(v); if(/^[=+\-@\t\r]/.test(s)) s="'"+s; return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+$('btn-csv').addEventListener('click', ()=>{
+  const list=filtered(); if(!list.length){ toast('Tiada aduan untuk dimuat turun.'); return; }
+  const head=['No Aduan','Tarikh Diterima','Fasiliti/Unit','Lokasi','Kategori','Jenis Kerosakan','No Aset','Keterangan','Keutamaan','Dilaporkan Oleh','Status','Dirujuk Kepada','Tarikh Selesai','Hari Terbuka/Selesai'];
+  const lines=[head.map(csvCell).join(',')];
+  list.forEach(a=>lines.push([a.noAduan,fmtD(a.tarikh),a.fasiliti,a.lokasi,katName(a.kategoriKod),a.jenis,a.noAset,a.keterangan,a.keutamaan,a.pelapor,a.status,a.dirujukKepada,a.tarikhSelesai?fmtD(a.tarikhSelesai):'',a.status==='Dibatalkan'?'':umur(a)].map(csvCell).join(',')));
+  const url=URL.createObjectURL(new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}));
+  const link=h('a',{href:url,download:`aduan-kerosakan-${todayStr()}.csv`}); document.body.append(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000);
+});
+
+/* ---------- Borang daftar ---------- */
+function fillSub(){
+  const k=$('f-kat').value, kat=KATEGORI.find(x=>x.k===k);
+  $('f-sub').replaceChildren(opt('', kat?'Pilih jenis kerosakan':'Pilih kategori dahulu'), ...(kat?kat.s.map(s=>opt(s,s)):[]));
+  if (k==='5'){ $('f-sub').value='Lain-lain'; $('sub-wrap').hidden=true; $('ket-hint').textContent='Kategori Lain-lain: terangkan dengan jelas apa yang rosak dan kenapa tidak sesuai dalam kategori lain (minimum 40 aksara).'; }
+  else { $('sub-wrap').hidden=false; $('ket-hint').textContent='Minimum 15 aksara.'; }
+  coldCheck();
+}
+function coldCheck(){ const c=$('f-sub').value===COLD; $('cold-note').hidden=!c; if(c) $('p-krit').checked=true; }
+$('f-kat').addEventListener('change',fillSub); $('f-sub').addEventListener('change',coldCheck);
+function resetForm(){ $('form').reset(); $('f-tarikh').value=todayStr(); $('f-tarikh').max=todayStr(); fillSub(); fillFasiliti(); $('f-err').textContent=''; }
+$('f-reset').addEventListener('click', resetForm);
+$('form').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const err=$('f-err'); err.textContent='';
+  const d={ tarikh:$('f-tarikh').value, fasiliti:$('f-fasiliti').value, lokasi:$('f-lokasi').value.trim(), kategoriKod:$('f-kat').value, jenis:$('f-sub').value,
+    noAset:$('f-aset').value.trim(), pelapor:$('f-pelapor').value.trim(), keterangan:$('f-ket').value.trim(), keutamaan:(document.querySelector('input[name="prio"]:checked')||{}).value };
+  const miss=[];
+  if(!d.tarikh) miss.push('tarikh'); if(!d.fasiliti) miss.push('fasiliti'); if(!d.lokasi) miss.push('lokasi'); if(!d.kategoriKod) miss.push('kategori'); if(!d.jenis) miss.push('jenis kerosakan'); if(!d.keutamaan) miss.push('keutamaan');
+  if (miss.length){ err.textContent='Lengkapkan: '+miss.join(', ')+'.'; return; }
+  if (d.tarikh>todayStr()){ err.textContent='Tarikh aduan tidak boleh melebihi hari ini.'; return; }
+  const min=d.kategoriKod==='5'?40:15; if(d.keterangan.length<min){ err.textContent=`Keterangan terlalu ringkas (minimum ${min} aksara).`; $('f-ket').focus(); return; }
+  const btn=$('f-submit'); btn.disabled=true; btn.textContent='Menyimpan…';
+  try{ const r=await api('daftar',{data:d}); resetForm(); toast(`Aduan ${r.noAduan} didaftarkan.`); await muat(); show('senarai'); bukaButiran(r.noAduan); }
+  catch(ex){ if(ex.code!=='UNAUTHORIZED') err.textContent=ex.message; }
+  finally{ btn.disabled=false; btn.textContent='Daftar aduan'; }
+});
+
+/* ---------- Butiran (drawer) ---------- */
+function closeDrawer(){ openNo=null; $('drawer').hidden=true; $('scrim').hidden=true; }
+$('d-close').addEventListener('click',closeDrawer); $('scrim').addEventListener('click',closeDrawer);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && openNo) closeDrawer(); });
+
+async function bukaButiran(no, senyap){
+  openNo=no; $('drawer').hidden=false; $('scrim').hidden=false; $('d-no').textContent=no;
+  if (!senyap){ $('d-info').replaceChildren(h('p',{class:'muted'},'Memuatkan butiran…')); $('d-log').replaceChildren(); $('d-upd').replaceChildren(); $('d-del').replaceChildren(); $('d-close').focus(); }
+  try{
+    const r=await api('butiran',{noAduan:no});
+    if (openNo!==no) return;
+    renderButiran(r.aduan, r.log||[]);
+  }catch(ex){ if(ex.code!=='UNAUTHORIZED') $('d-info').replaceChildren(h('p',{class:'err'},ex.message)); }
+}
+function renderButiran(a, log){
+  const u=umur(a), late=OPEN.has(a.status)&&u>had();
+  const kv=(k,v)=>[h('dt',null,k),h('dd',null,v||'—')];
+  $('d-info').replaceChildren(
+    h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px'}, h('span',{class:'pill '+stCls(a.status)},a.status), h('span',{class:'pr pr-'+a.keutamaan},a.keutamaan),
+      a.status==='Dibatalkan'?null:h('span',{class:'pill',style:`background:var(--surface);color:${late?'var(--crit)':'var(--muted)'};border:1px solid var(--line)`}, a.status==='Selesai'?`Selesai dalam ${u} hari`:`${u} hari terbuka`)),
+    h('dl',{class:'kv'}, kv('Tarikh diterima',fmtD(a.tarikh)), kv('Fasiliti / unit',a.fasiliti), kv('Lokasi',a.lokasi), kv('Kategori',`${a.kategoriKod}. ${katName(a.kategoriKod)}`),
+      kv('Jenis kerosakan',a.jenis), kv('No. aset',a.noAset), kv('Dilaporkan oleh',a.pelapor), kv('Dirujuk kepada',a.dirujukKepada), a.tarikhSelesai?kv('Tarikh selesai',fmtD(a.tarikhSelesai)):null),
+    h('div',{style:'margin-top:12px'}, h('div',{class:'eyebrow',style:'margin-bottom:6px'},'Keterangan'), h('div',{class:'desc'},a.keterangan)));
+  $('d-log').replaceChildren(h('div',{class:'eyebrow',style:'margin-bottom:8px'},'Rekod tindakan'),
+    h('ol',{class:'timeline'}, log.map(l=>h('li',null, h('div',null,h('b',null,l.status), l.dirujuk?` · dirujuk kepada ${l.dirujuk}`:''),
+      l.catatan?h('div',{style:'white-space:pre-wrap;overflow-wrap:anywhere'},l.catatan):null,
+      h('div',{class:'meta'},`Tarikh tindakan ${fmtD(l.tarikh)} · direkod ${fmtDT(l.masa)} oleh ${l.oleh||'—'}`)))));
+  buildUpdate(a);
+}
+function buildUpdate(a){
+  const box=$('d-upd'), del=$('d-del'); del.replaceChildren();
+  if (!bolehTulis()){ box.replaceChildren(); return; }
+  const sSel=h('select',{id:'u-status'}, STATUS.map(s=>opt(s,s,s===a.status)));
+  const ruj=h('input',{id:'u-ruj',type:'text',list:'ruj-list',maxlength:'100',placeholder:'Unit / pihak yang menerima rujukan'}); ruj.value=a.dirujukKepada||'';
+  const tgl=h('input',{id:'u-tarikh',type:'date',max:todayStr(),min:a.tarikh}); tgl.value=todayStr();
+  const cat=h('textarea',{id:'u-catatan',rows:'3',maxlength:'800',placeholder:'Tindakan yang diambil, no. rujukan aduan penyelenggaraan, jangkaan siap'});
+  const err=h('span',{class:'err',role:'alert'}), btn=h('button',{class:'btn primary',type:'button'},'Simpan kemas kini');
+  btn.addEventListener('click', async ()=>{
+    err.textContent='';
+    const ns=sSel.value, rj=ruj.value.trim(), tg=tgl.value, ct=cat.value.trim();
+    if (!tg){ err.textContent='Masukkan tarikh tindakan.'; return; }
+    if (tg<a.tarikh){ err.textContent='Tarikh tindakan tidak boleh sebelum tarikh aduan diterima.'; return; }
+    if (ns===a.status && rj===(a.dirujukKepada||'') && !ct){ err.textContent='Tiada perubahan. Tukar status atau tambah catatan.'; return; }
+    if ((ns==='Selesai'||ns==='Dibatalkan') && !ct){ err.textContent=`Tambah catatan untuk status ${ns}.`; return; }
+    if (ns==='Dirujuk' && !rj){ err.textContent='Nyatakan pihak yang menerima rujukan.'; return; }
+    btn.disabled=true; btn.textContent='Menyimpan…';
+    try{ await api('kemaskini',{data:{noAduan:a.noAduan,status:ns,dirujukKepada:rj,tarikh:tg,catatan:ct}}); toast('Kemas kini disimpan.'); await muat(); bukaButiran(a.noAduan,true); }
+    catch(ex){ if(ex.code!=='UNAUTHORIZED') err.textContent=ex.message; btn.disabled=false; btn.textContent='Simpan kemas kini'; }
+  });
+  box.replaceChildren(h('div',{class:'upd'}, h('h3',null,'Kemas kini status'), h('datalist',{id:'ruj-list'},(TET.rujukan||[]).map(r=>h('option',{value:r}))),
+    h('div',{class:'two'}, h('label',{class:'f'},'Status',sSel), h('label',{class:'f'},'Tarikh tindakan',tgl)),
+    h('label',{class:'f'},'Dirujuk kepada',ruj), h('label',{class:'f'},'Catatan tindakan',cat), h('div',{class:'form-actions'},btn,err)));
+  if (isAdmin()){
+    const start=h('button',{class:'btn danger',type:'button'},'Padam aduan ini');
+    start.addEventListener('click',()=>{
+      const yes=h('button',{class:'btn danger',type:'button'},'Ya, padam'), no=h('button',{class:'btn',type:'button'},'Batal');
+      no.addEventListener('click',()=>buildUpdate(a));
+      yes.addEventListener('click', async ()=>{ yes.disabled=true; try{ await api('padam',{noAduan:a.noAduan}); closeDrawer(); toast(`Aduan ${a.noAduan} dipadam.`); await muat(); }catch(ex){ yes.disabled=false; if(ex.code!=='UNAUTHORIZED') toast(ex.message); } });
+      del.replaceChildren(h('div',{class:'confirm'}, h('span',null,'Padam terus aduan ini dan rekod tindakannya? Untuk aduan tersalah daftar sahaja. Gunakan status Dibatalkan untuk kes lain.'), yes, no));
+    });
+    del.replaceChildren(start);
+  }
+}
+
+/* ---------- Pengguna ---------- */
+async function muatPengguna(){
+  if (!isAdmin()) return;
+  try{ const r=await api('senaraiPengguna'); PENGGUNA=r.pengguna||[]; renderPengguna(); }catch(ex){ if(ex.code!=='UNAUTHORIZED') toast(ex.message); }
+}
+function renderPengguna(){
+  const t=$('tbl-pengguna');
+  if (!PENGGUNA.length){ t.replaceChildren(h('tbody',null,h('tr',null,h('td',{class:'muted'},'Belum ada pengguna.')))); return; }
+  t.replaceChildren(h('thead',null,h('tr',null,h('th',null,'Nama'),h('th',null,'Emel'),h('th',null,'Peranan'),h('th',null,'Fasiliti'),h('th',null,'Status'),h('th',null,'Log masuk terakhir'),h('th',null,''))),
+    h('tbody',null,PENGGUNA.map(u=>{
+      const ed=h('button',{class:'btn small',type:'button'},'Edit'); ed.addEventListener('click',()=>editPengguna(u));
+      const rs=h('button',{class:'btn small',type:'button'},'Set semula kata laluan'); rs.addEventListener('click',()=>setSemula(u.email, rs));
+      return h('tr',null,h('td',null,u.nama),h('td',null,u.email),h('td',null,PERANAN_LABEL[u.peranan]||u.peranan),h('td',null,u.fasiliti||'—'),
+        h('td',null,u.aktif?(u.tukarKataLaluan?'Aktif · belum tukar kata laluan':'Aktif'):'Tidak aktif'),h('td',null,u.logMasukTerakhir?fmtDT(u.logMasukTerakhir):'—'),
+        h('td',null,h('div',{style:'display:flex;gap:6px'},ed,rs)));
+    })));
+}
+function revealPw(email, pw){
+  const copy=h('button',{class:'btn small',type:'button'},'Salin');
+  copy.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(pw); toast('Disalin.'); }catch(e){ toast('Pilih teks dan salin secara manual.'); } });
+  const close=h('button',{class:'btn small',type:'button'},'Sudah disalin, tutup'); close.addEventListener('click',()=>$('pw-reveal').replaceChildren());
+  $('pw-reveal').replaceChildren(h('div',{class:'secret-box'}, h('b',null,`Kata laluan sementara untuk ${email}`), h('span',{class:'secret'},pw),
+    h('span',{class:'hint'},'Paparan sekali sahaja. Berikan kepada pengguna secara terus (bukan dalam kumpulan WhatsApp). Pengguna perlu menukarnya semasa log masuk pertama.'), h('div',{class:'form-actions'},copy,close)));
+  window.scrollTo(0,0);
+}
+async function setSemula(email, btn){
+  btn.disabled=true;
+  try{ const r=await api('setSemula',{email}); revealPw(r.email, r.kataLaluanSementara); await muatPengguna(); }catch(ex){ if(ex.code!=='UNAUTHORIZED') toast(ex.message); }
+  finally{ btn.disabled=false; }
+}
+function syncPeranan(){ $('u-fas-wrap').hidden = $('u-peranan').value!=='pentadbir'; }
+$('u-peranan').addEventListener('change',syncPeranan);
+function resetUForm(){ editEmail=null; $('u-form').reset(); $('u-email').disabled=false; $('u-title').textContent='Tambah pengguna'; $('u-save').textContent='Tambah pengguna'; $('u-cancel').hidden=true; $('u-err').textContent=''; syncPeranan(); }
+function editPengguna(u){
+  editEmail=u.email; $('u-email').value=u.email; $('u-email').disabled=true; $('u-nama').value=u.nama||''; $('u-peranan').value=u.peranan; $('u-fasiliti').value=u.fasiliti||''; $('u-aktif').checked=!!u.aktif;
+  $('u-title').textContent='Edit pengguna'; $('u-save').textContent='Simpan perubahan'; $('u-cancel').hidden=false; syncPeranan(); $('u-nama').focus();
+}
+$('u-cancel').addEventListener('click',resetUForm);
+$('u-form').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const err=$('u-err'); err.textContent='';
+  const d={email:$('u-email').value.trim().toLowerCase(), nama:$('u-nama').value.trim(), peranan:$('u-peranan').value, fasiliti:$('u-fasiliti').value, aktif:$('u-aktif').checked, baru:!editEmail};
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)){ err.textContent='Masukkan emel yang sah.'; return; }
+  if (!d.nama){ err.textContent='Masukkan nama.'; return; }
+  if (d.peranan==='pentadbir' && !d.fasiliti){ err.textContent='Pilih fasiliti untuk pentadbir fasiliti.'; return; }
+  if (!editEmail && PENGGUNA.some(u=>u.email.toLowerCase()===d.email)){ err.textContent='Emel ini sudah berdaftar. Gunakan Edit.'; return; }
+  const btn=$('u-save'); btn.disabled=true;
+  try{ const r=await api('simpanPengguna',{data:d}); PENGGUNA=r.pengguna||PENGGUNA; renderPengguna(); if(r.kataLaluanSementara) revealPw(r.email, r.kataLaluanSementara); else toast('Pengguna dikemas kini.'); resetUForm(); }
+  catch(ex){ if(ex.code!=='UNAUTHORIZED') err.textContent=ex.message; }
+  finally{ btn.disabled=false; }
+});
+
+/* ---------- Tetapan ---------- */
+function renderTetapan(){
+  if (['s-fas','s-ruj','s-had'].includes(document.activeElement && document.activeElement.id)) return;
+  $('s-fas').value=(TET.fasiliti||[]).join('\n'); $('s-ruj').value=(TET.rujukan||[]).join('\n'); $('s-had').value=had();
+}
+const lines = s => [...new Set(s.split('\n').map(x=>x.trim()).filter(Boolean))];
+$('s-save').addEventListener('click', async ()=>{
+  const err=$('s-err'); err.textContent='';
+  const n=Number($('s-had').value), fas=lines($('s-fas').value);
+  if (!fas.length){ err.textContent='Senarai fasiliti tidak boleh kosong.'; return; }
+  if (!Number.isInteger(n)||n<1||n>365){ err.textContent='Had hari mesti nombor bulat antara 1 dan 365.'; return; }
+  const b=$('s-save'); b.disabled=true;
+  try{ const r=await api('simpanTetapan',{data:{fasiliti:fas, rujukan:lines($('s-ruj').value), hadHari:n}}); TET=r.tetapan; renderAll(); toast('Tetapan disimpan.'); }
+  catch(ex){ if(ex.code!=='UNAUTHORIZED') err.textContent=ex.message; }
+  finally{ b.disabled=false; }
+});
+
+/* ---------- Render ---------- */
+function renderAll(){ fillYears($('r-tahun'),false); fillYears($('l-tahun'),true); fillFasiliti(); renderRingkasan(); renderSenarai(); renderTetapan(); }
+
+/* ---------- Mula ---------- */
+resetForm(); resetUForm();
+(async ()=>{
+  if (!configured()){ showLogin(); return; }
+  if (!getToken()){ showLogin(); return; }
+  try{ const r=await api('saya'); ME=r.user; if (ME.tukarKataLaluan) showTukar(true); else await mulaApp(); }
+  catch(ex){ if(ex.code!=='UNAUTHORIZED' && ex.code!=='PASSWORD_CHANGE') showLogin(ex.message); }
+})();
+})();
+</script>
+</body>
+</html>
