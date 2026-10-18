@@ -20,12 +20,13 @@ const HASH_ULANG = 300;                 // bilangan pusingan hash
 const LOGIN_MAKS = 8;                   // percubaan login maksimum ...
 const LOGIN_TEMPOH_SAAT = 300;          // ... dalam 5 minit
 
-const SH = { ADUAN: 'Aduan', LOG: 'Log', PENGGUNA: 'Pengguna', FASILITI: 'Fasiliti', RUJUKAN: 'Rujukan', TETAPAN: 'Tetapan', AUDIT: 'Audit' };
+const SH = { ADUAN: 'Aduan', LOG: 'Log', PENGGUNA: 'Pengguna', FASILITI: 'Fasiliti', KD: 'KlinikDesa', RUJUKAN: 'Rujukan', TETAPAN: 'Tetapan', AUDIT: 'Audit' };
 const HEAD = {
   Aduan: ['NoAduan', 'TarikhDiterima', 'Fasiliti', 'Lokasi', 'KategoriKod', 'Kategori', 'JenisKerosakan', 'NoAset', 'Keterangan', 'Keutamaan', 'DilaporkanOleh', 'Status', 'DirujukKepada', 'TarikhSelesai', 'DidaftarOleh', 'DidaftarPada', 'DikemaskiniOleh', 'DikemaskiniPada'],
   Log: ['NoAduan', 'Masa', 'TarikhTindakan', 'Status', 'DirujukKepada', 'Catatan', 'Oleh'],
   Pengguna: ['Email', 'Nama', 'Peranan', 'Fasiliti', 'Aktif', 'Salt', 'Hash', 'TukarKataLaluan', 'DiciptaPada', 'LogMasukTerakhir'],
   Fasiliti: ['Nama'],
+  KlinikDesa: ['Nama', 'KKInduk'],
   Rujukan: ['Nama'],
   Tetapan: ['Kunci', 'Nilai'],
   Audit: ['Masa', 'Email', 'Tindakan', 'Butiran']
@@ -42,8 +43,12 @@ const JENIS_COLD = 'Peti sejuk vaksin / cold chain';
 const STATUS = ['Baru', 'Dirujuk', 'Dalam Tindakan', 'Selesai', 'Dibatalkan'];
 const KEUTAMAAN = ['Kritikal', 'Tinggi', 'Biasa'];
 const PERANAN = ['admin', 'pentadbir', 'pemantau'];
-// Pilihan khas dalam senarai fasiliti: pengguna perlu nyatakan nama, direkod sebagai "<pilihan>: <nama>"
-const PERLU_NYATAKAN = ['Klinik Desa', 'Lain-lain'];
+// Pilihan khas dalam senarai fasiliti:
+//  - 'Klinik Desa': pengguna pilih KD dari tab KlinikDesa; aduan direkod dengan nama KD itu
+//  - 'Lain-lain'  : pengguna taip nama; direkod sebagai "Lain-lain: <nama>"
+const PILIHAN_KD = 'Klinik Desa';
+const PILIHAN_LAIN = 'Lain-lain';
+const PILIHAN_KHAS = [PILIHAN_KD, PILIHAN_LAIN];
 
 /* =========================================================
  * PINTU MASUK WEB APP
@@ -327,8 +332,18 @@ function tukarKataLaluan_(s, b) {
  * DATA ADUAN
  * ========================================================= */
 
-function dalamSkop_(s, fasiliti) {
-  return s.peranan !== 'pentadbir' || String(fasiliti) === String(s.fasiliti);
+/** Peta nama KD -> KK induk */
+function petaKd_(kd) {
+  const m = {};
+  (kd || tetapan_().klinikDesa).forEach(function (k) { m[k.nama] = k.induk; });
+  return m;
+}
+
+/** Pentadbir fasiliti nampak fasiliti sendiri dan klinik desa di bawahnya */
+function dalamSkop_(s, fasiliti, peta) {
+  if (s.peranan !== 'pentadbir') return true;
+  const f = String(fasiliti);
+  return f === String(s.fasiliti) || (peta || petaKd_())[f] === String(s.fasiliti);
 }
 
 function aduanAwam_(r) {
@@ -344,17 +359,22 @@ function aduanAwam_(r) {
 function tetapan_() {
   const fasiliti = table_(SH.FASILITI).rows.map(function (r) { return r.Nama; }).filter(String);
   const rujukan = table_(SH.RUJUKAN).rows.map(function (r) { return r.Nama; }).filter(String);
+  const klinikDesa = table_(SH.KD).rows
+    .filter(function (r) { return r.Nama; })
+    .map(function (r) { return { nama: r.Nama, induk: r.KKInduk }; });
   const t = table_(SH.TETAPAN).rows;
   const had = Number((t.find(function (r) { return r.Kunci === 'HadHari'; }) || {}).Nilai) || 14;
-  return { fasiliti: fasiliti, rujukan: rujukan, hadHari: had };
+  return { fasiliti: fasiliti, klinikDesa: klinikDesa, rujukan: rujukan, hadHari: had };
 }
 
 function muat_(s) {
+  const tet = tetapan_();
+  const peta = petaKd_(tet.klinikDesa);
   const aduan = table_(SH.ADUAN).rows
-    .filter(function (r) { return r.NoAduan && dalamSkop_(s, r.Fasiliti); })
+    .filter(function (r) { return r.NoAduan && dalamSkop_(s, r.Fasiliti, peta); })
     .map(aduanAwam_)
     .sort(function (a, b) { return String(b.didaftarPada).localeCompare(String(a.didaftarPada)); });
-  return { user: awam_(s), tetapan: tetapan_(), aduan: aduan, kategori: KATEGORI };
+  return { user: awam_(s), tetapan: tet, aduan: aduan, kategori: KATEGORI };
 }
 
 function cariAduan_(no) {
@@ -381,13 +401,16 @@ function daftar_(s, d) {
   const tarikh = tarikh_(d.tarikh, 'Tarikh aduan diterima');
   const tet = tetapan_();
   let fasiliti = teks_(d.fasiliti, 100, 'Fasiliti', true);
-  if (s.peranan === 'pentadbir') {
-    fasiliti = s.fasiliti;
-  } else if (PERLU_NYATAKAN.indexOf(fasiliti) !== -1) {
-    if (tet.fasiliti.indexOf(fasiliti) === -1) throw appErr_('VALIDATION', 'Pilihan ' + fasiliti + ' tidak ada dalam senarai fasiliti.');
-    fasiliti = fasiliti + ': ' + teks_(d.fasilitiLain, 80, 'Nama ' + fasiliti, true);
-  } else if (tet.fasiliti.indexOf(fasiliti) === -1) {
-    throw appErr_('VALIDATION', 'Fasiliti tidak ada dalam senarai.');
+  if (tet.fasiliti.indexOf(fasiliti) === -1) throw appErr_('VALIDATION', 'Fasiliti tidak ada dalam senarai.');
+  if (fasiliti === PILIHAN_KD) {
+    const kd = String(d.klinikDesa || '');
+    if (!tet.klinikDesa.some(function (k) { return k.nama === kd; })) throw appErr_('VALIDATION', 'Pilih klinik desa daripada senarai.');
+    fasiliti = kd;
+  } else if (fasiliti === PILIHAN_LAIN) {
+    fasiliti = PILIHAN_LAIN + ': ' + teks_(d.fasilitiLain, 80, 'Nama fasiliti / unit (Lain-lain)', true);
+  }
+  if (!dalamSkop_(s, fasiliti, petaKd_(tet.klinikDesa))) {
+    throw appErr_('FORBIDDEN', 'Anda hanya boleh mendaftar aduan untuk ' + s.fasiliti + ' dan klinik desa di bawahnya.');
   }
   const lokasi = teks_(d.lokasi, 120, 'Lokasi', true);
   const kod = String(d.kategoriKod || '');
@@ -492,16 +515,27 @@ function tulisSenarai_(name, list) {
 function simpanTetapan_(s, d) {
   const fasiliti = senaraiBersih_(d.fasiliti, 'Nama fasiliti');
   const rujukan = senaraiBersih_(d.rujukan, 'Pihak rujukan');
+  const kdSeen = {};
+  const klinikDesa = (Array.isArray(d.klinikDesa) ? d.klinikDesa : []).map(function (k) {
+    return { nama: teks_(k && k.nama, 100, 'Nama klinik desa', false), induk: teks_(k && k.induk, 100, 'KK induk', false) };
+  }).filter(function (k) { if (!k.nama || kdSeen[k.nama]) return false; kdSeen[k.nama] = true; return true; }).slice(0, 100);
+  klinikDesa.forEach(function (k) {
+    if (fasiliti.indexOf(k.induk) === -1) throw appErr_('VALIDATION', 'KK induk bagi ' + k.nama + ' tiada dalam senarai fasiliti: ' + (k.induk || '(kosong)'));
+  });
   const had = Number(d.hadHari);
   if (!fasiliti.length) throw appErr_('VALIDATION', 'Senarai fasiliti tidak boleh kosong.');
   if (!(had >= 1 && had <= 365 && Math.floor(had) === had)) throw appErr_('VALIDATION', 'Had hari mesti nombor bulat antara 1 dan 365.');
   return withLock_(function () {
     tulisSenarai_(SH.FASILITI, fasiliti);
     tulisSenarai_(SH.RUJUKAN, rujukan);
+    const kdSh = sheet_(SH.KD);
+    const kdLast = kdSh.getLastRow();
+    if (kdLast > 1) kdSh.getRange(2, 1, kdLast - 1, 2).clearContent();
+    if (klinikDesa.length) kdSh.getRange(2, 1, klinikDesa.length, 2).setValues(klinikDesa.map(function (k) { return [safe_(k.nama), safe_(k.induk)]; }));
     const t = table_(SH.TETAPAN);
     const r = t.rows.find(function (x) { return x.Kunci === 'HadHari'; });
     if (r) t.sh.getRange(r._row, 2).setValue(had); else t.sh.appendRow(['HadHari', had]);
-    audit_(s.email, 'SIMPAN_TETAPAN', fasiliti.length + ' fasiliti, had ' + had + ' hari');
+    audit_(s.email, 'SIMPAN_TETAPAN', fasiliti.length + ' fasiliti, ' + klinikDesa.length + ' klinik desa, had ' + had + ' hari');
     return { tetapan: tetapan_() };
   });
 }
@@ -523,7 +557,7 @@ function simpanPengguna_(s, d) {
   if (PERANAN.indexOf(peranan) === -1) throw appErr_('VALIDATION', 'Peranan tidak sah.');
   let fasiliti = teks_(d.fasiliti, 100, 'Fasiliti', false);
   if (peranan === 'pentadbir') {
-    if (PERLU_NYATAKAN.indexOf(fasiliti) !== -1 || tetapan_().fasiliti.indexOf(fasiliti) === -1) throw appErr_('VALIDATION', 'Pilih fasiliti untuk pentadbir fasiliti.');
+    if (PILIHAN_KHAS.indexOf(fasiliti) !== -1 || tetapan_().fasiliti.indexOf(fasiliti) === -1) throw appErr_('VALIDATION', 'Pilih fasiliti untuk pentadbir fasiliti.');
   } else fasiliti = '';
   const aktif = d.aktif !== false;
 

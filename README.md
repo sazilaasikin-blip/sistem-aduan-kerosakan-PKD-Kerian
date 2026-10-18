@@ -4,14 +4,14 @@ Sistem untuk pihak pentadbiran mendaftar, memantau dan mengemas kini aduan keros
 
 - **Frontend:** `index.html` (dihoskan di GitHub Pages)
 - **Backend:** `apps-script/Code.gs` (Google Apps Script Web App)
-- **Pangkalan data:** Google Sheet (tab `Aduan`, `Log`, `Pengguna`, `Fasiliti`, `Rujukan`, `Tetapan`, `Audit`)
+- **Pangkalan data:** Google Sheet (tab `Aduan`, `Log`, `Pengguna`, `Fasiliti`, `KlinikDesa`, `Rujukan`, `Tetapan`, `Audit`)
 
 ## Peranan pengguna
 
 | Peranan | Lihat aduan | Daftar / kemas kini | Padam aduan | Urus pengguna & tetapan |
 |---|---|---|---|---|
 | Admin | Semua fasiliti | Semua fasiliti | Ya | Ya |
-| Pentadbir fasiliti | Fasiliti sendiri | Fasiliti sendiri | Tidak | Tidak |
+| Pentadbir fasiliti | Fasiliti sendiri dan klinik desa di bawahnya | Fasiliti sendiri dan klinik desa di bawahnya | Tidak | Tidak |
 | Pemantau | Semua fasiliti | Tidak | Tidak | Tidak |
 
 Semua semakan peranan dan skop fasiliti dibuat di server (Apps Script), bukan di browser.
@@ -80,7 +80,7 @@ Setup akan mencipta semua tab, menyembunyikan kolum `Salt` dan `Hash`, dan menja
 ### 7. Konfigurasi pertama dalam sistem
 
 1. Log masuk dengan emel admin dan kata laluan sementara. Tukar kata laluan apabila diminta.
-2. Tab **Tetapan**: semak senarai klinik kesihatan dan unit PKD (satu setiap baris), senarai pihak rujukan tindakan, dan had hari lewat (lalai 14 hari). Simpan. Baris `Klinik Desa` dan `Lain-lain` ialah pilihan khas: apabila dipilih dalam borang, pengguna perlu menulis nama sendiri (contoh: nama klinik desa), dan aduan direkod sebagai `Klinik Desa: <nama>` atau `Lain-lain: <nama>`. Buang baris itu jika tidak mahu pilihan berkenaan. Pilihan ini tidak boleh dijadikan fasiliti untuk akaun pentadbir fasiliti.
+2. Tab **Tetapan**: semak senarai klinik kesihatan dan unit PKD (satu setiap baris), senarai pihak rujukan tindakan, dan had hari lewat (lalai 14 hari). Simpan. Baris `Klinik Desa` dan `Lain-lain` ialah pilihan khas. `Klinik Desa` membuka dropdown klinik desa yang beroperasi (diurus dalam ruangan *Klinik desa yang beroperasi*, format `Nama klinik desa | KK induk`), dan aduan direkod dengan nama klinik desa itu. `Lain-lain` membuka ruangan teks, dan aduan direkod sebagai `Lain-lain: <nama>`. Kedua-dua pilihan ini tidak boleh dijadikan fasiliti untuk akaun pentadbir fasiliti. Pentadbir fasiliti secara automatik boleh mendaftar dan melihat aduan klinik desa yang KK induknya ialah fasiliti mereka. Apabila klinik desa ditutup, buang barisnya dari senarai; aduan lama kekal.
 3. Tab **Pengguna**: tambah pengguna. Sistem memaparkan kata laluan sementara sekali sahaja untuk setiap pengguna baharu. Berikan secara terus kepada pengguna berkenaan.
 
 ---
