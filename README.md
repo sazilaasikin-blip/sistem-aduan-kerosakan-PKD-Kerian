@@ -111,5 +111,5 @@ Setup akan mencipta semua tab, menyembunyikan kolum `Salt` dan `Hash`, dan menja
 ## Had teknikal
 
 - Sesuai untuk beberapa ribu aduan. Data dimuatkan sekali gus semasa log masuk dan butang **Muat semula**.
-- Apps Script mempunyai kuota harian dan had pelaksanaan serentak. Untuk penggunaan oleh pentadbiran 11 klinik, ini mencukupi.
+- Apps Script mempunyai kuota harian dan had pelaksanaan serentak. Untuk penggunaan oleh pentadbiran 10 klinik kesihatan dan unit PKD, ini mencukupi.
 - Kategori dan jenis kerosakan ditakrifkan dalam kod (`KATEGORI` dalam `Code.gs` dan `index.html`). Jika diubah, ubah kedua-dua fail.
