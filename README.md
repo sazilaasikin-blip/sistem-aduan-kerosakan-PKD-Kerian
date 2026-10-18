@@ -4,7 +4,7 @@ Sistem untuk pihak pentadbiran mendaftar, memantau dan mengemas kini aduan keros
 
 - **Frontend:** `index.html` + `app.js` (dihoskan di GitHub Pages)
 - **Backend:** `apps-script/Code.gs` (Google Apps Script Web App)
-- **Pangkalan data:** Google Sheet (tab `Aduan`, `Log`, `Pengguna`, `Fasiliti`, `KlinikDesa`, `Rujukan`, `Tetapan`, `Audit`)
+- **Pangkalan data:** Google Sheet (tab `Aduan`, `Log`, `Pengguna`, `Fasiliti`, `KlinikDesa`, `Lokasi`, `Rujukan`, `Tetapan`, `Audit`)
 
 ## Peranan pengguna
 
@@ -15,6 +15,19 @@ Sistem untuk pihak pentadbiran mendaftar, memantau dan mengemas kini aduan keros
 | Pemantau | Semua fasiliti | Tidak | Tidak | Tidak |
 
 Semua semakan peranan dan skop fasiliti dibuat di server (Apps Script), bukan di browser.
+
+## Kategori aset dan KEW.PA-10
+
+Setiap aduan ditanda **Aset Alih** atau **Aset Tak Alih** (dipilih automatik ikut kategori kerosakan, boleh ditukar).
+
+- **Aset alih** mengikut KEW.PA-10 (Tatacara Pengurusan Aset Alih Kerajaan, Pekeliling Perbendaharaan AM 2.4):
+  - Bahagian I diisi semasa daftar: jenis aset, no. siri pendaftaran aset/komponen, pengguna terakhir, tarikh kerosakan, perihal kerosakan, nama dan jawatan pengadu.
+  - Bahagian II (Pegawai Aset/Pegawai Teknikal) dan Bahagian III (keputusan Ketua Jabatan) diisi oleh **admin** dalam butiran aduan.
+  - Butang **Cetak KEW.PA-10** menjana borang berisi untuk ditandatangan. Semak susunan Bahagian III dengan borang rasmi yang digunakan di PKD.
+  - Selepas pembaikan, rekod penyelenggaraan harta modal masih perlu dibuat dalam KEW.PA-15 mengikut tatacara sedia ada.
+- **Aset tak alih** (bangunan dan struktur) tidak menggunakan KEW.PA-10. Tindakan direkod melalui kemas kini status.
+
+Dalam tab `Aduan`, lajur `B2_*` ialah Bahagian II dan `B3_*` ialah Bahagian III. Lokasi kerosakan dipilih daripada tab `Lokasi` (boleh diedit di tab Tetapan); pilihan `Lain-lain` memerlukan perincian lokasi.
 
 ## Aliran status aduan
 
@@ -88,7 +101,7 @@ Setup akan mencipta semua tab, menyembunyikan kolum `Salt` dan `Hash`, dan menja
 
 ## Kemas kini kod selepas ini
 
-- **Backend (`Code.gs`)**: selepas edit, **Deploy > Manage deployments > ikon pensel > Version: New version > Deploy**. URL kekal sama, jadi `index.html` tidak perlu diubah.
+- **Backend (`Code.gs`)**: selepas edit, jalankan **Aduan Kerosakan > Setup awal sistem** sekali (menambah lajur atau tab baharu tanpa mengubah data lama), kemudian **Deploy > Manage deployments > ikon pensel > Version: New version > Deploy**. URL kekal sama, jadi `index.html` tidak perlu diubah.
 - **Frontend (`index.html`, `app.js`)**: muat naik semula ke GitHub. Pages dikemas kini dalam 1–2 minit.
 
 ## Ciri keselamatan yang dibina

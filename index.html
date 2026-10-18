@@ -100,7 +100,7 @@ td.num,th.num{text-align:right}
 .note{font-size:12.5px;color:var(--muted);line-height:1.45;max-width:110ch;margin:0}
 
 /* Senarai */
-.filters{display:grid;grid-template-columns:minmax(180px,1.6fr) repeat(5,minmax(120px,1fr));gap:8px}
+.filters{display:grid;grid-template-columns:minmax(180px,1.6fr) repeat(6,minmax(110px,1fr));gap:8px}
 @media (max-width:980px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}.filters .q{grid-column:1/-1}}
 .list{display:flex;flex-direction:column;gap:8px}
 .row{display:grid;grid-template-columns:150px minmax(0,1.3fr) minmax(0,1.4fr) 110px 130px 64px;gap:6px 14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:12px 14px;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
@@ -166,6 +166,45 @@ td.num,th.num{text-align:right}
 
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:6px;font-size:14px;z-index:60;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
 .loading{opacity:.6;pointer-events:none}
+
+/* KEW.PA-10 */
+.kewpa{grid-column:1/-1;border:1px solid var(--line);border-radius:8px;padding:12px 14px 14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;margin:0;min-width:0}
+.kewpa legend{font-weight:600;font-size:13px;padding:0 6px;color:var(--accent)}
+@media (max-width:640px){.kewpa{grid-template-columns:minmax(0,1fr)}}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:6px;padding:9px 12px;cursor:pointer;font-size:14px;flex:1 1 220px}
+.seg label b{display:block}
+.seg label span span{color:var(--muted);font-size:12.5px}
+.seg input{width:auto;margin-top:4px}
+.seg label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.chip{font-size:11.5px;font-weight:600;letter-spacing:.03em;padding:2px 7px;border-radius:4px;border:1px solid var(--line);color:var(--muted);width:max-content;white-space:nowrap}
+.chip.alih{border-color:var(--info);color:var(--info)}
+.kw-box{display:flex;flex-direction:column;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px}
+.kw-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.kw-warn{font-size:13px;padding:8px 10px;border-radius:6px;background:var(--warn-soft);border-left:3px solid var(--warn)}
+.kw-ok{font-size:13px;padding:8px 10px;border-radius:6px;background:var(--ok-soft);border-left:3px solid var(--ok)}
+.kw-sub{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:4px}
+
+/* Cetakan KEW.PA-10 */
+#print-kewpa{display:none}
+@media print{
+  @page{size:A4;margin:16mm 18mm}
+  body{background:#fff !important;color:#000 !important;padding:0 !important}
+  body > *:not(#print-kewpa){display:none !important}
+  #print-kewpa{display:block !important;font:11pt/1.45 Arial,Helvetica,sans-serif;color:#000}
+}
+.pk-code{text-align:right;font-weight:700}
+.pk-title{text-align:center;font-weight:700;margin:14px 0 18px;letter-spacing:.02em}
+.pk-sec{font-weight:700;margin:16px 0 8px}
+.pk-tbl{width:100%;border-collapse:collapse;font-size:11pt}
+.pk-tbl td{border:0;padding:5px 4px;vertical-align:top;white-space:normal}
+.pk-tbl td.n{width:28px}
+.pk-tbl td.l{width:200px}
+.pk-tbl td.c{width:12px}
+.pk-tbl td.v{border-bottom:1px dotted #000;white-space:pre-wrap;overflow-wrap:anywhere}
+.pk-sign{margin-top:22px;display:flex;justify-content:flex-end}
+.pk-sign span{display:inline-block;min-width:220px;border-top:1px dotted #000;text-align:center;padding-top:3px;font-size:10pt}
+.pk-foot{margin-top:24px;font-size:8.5pt;color:#444;border-top:1px solid #999;padding-top:4px}
 @media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}to{transform:none;opacity:1}}}
 </style>
 </head>
@@ -256,6 +295,7 @@ td.num,th.num{text-align:right}
         <input class="q" id="l-q" type="search" placeholder="Cari no. aduan, lokasi, no. aset, keterangan…" aria-label="Carian">
         <select id="l-status" aria-label="Status"></select>
         <select id="l-kat" aria-label="Kategori"></select>
+        <select id="l-aset" aria-label="Kategori aset"><option value="">Semua aset</option><option value="Aset Alih">Aset alih</option><option value="Aset Tak Alih">Aset tak alih</option></select>
         <select id="l-fas" aria-label="Fasiliti"></select>
         <select id="l-pri" aria-label="Keutamaan"></select>
         <select id="l-tahun" aria-label="Tahun aduan"></select>
@@ -270,17 +310,32 @@ td.num,th.num{text-align:right}
       <div><div class="eyebrow">Aduan baharu</div><h2>Daftar aduan kerosakan</h2></div>
       <p class="muted" style="margin:0;max-width:70ch">Untuk kerosakan aset, bangunan dan fasiliti sahaja. Aduan perkhidmatan, pelanggan, klinikal atau sumber manusia tidak didaftarkan di sini.</p>
       <form class="form" id="form" novalidate>
-        <label class="f">Tarikh aduan diterima <span class="req">*</span><input type="date" id="f-tarikh"></label>
-        <label class="f">Fasiliti / unit <span class="req">*</span><select id="f-fasiliti"></select><span class="hint" id="fas-hint" hidden></span></label>
-        <label class="f full" id="kd-wrap" hidden>Klinik desa <span class="req">*</span><select id="f-kd"></select></label>
-        <label class="f full" id="fas-lain-wrap" hidden>Nyatakan fasiliti / unit <span class="req">*</span><input type="text" id="f-fas-lain" maxlength="80" placeholder="Nama fasiliti atau unit"></label>
-        <label class="f full">Lokasi kerosakan <span class="req">*</span><input type="text" id="f-lokasi" maxlength="120" placeholder="Contoh: Bilik Rawatan 2, tandas pesakit wanita, ruang menunggu KKIA"></label>
-        <label class="f">Kategori <span class="req">*</span><select id="f-kat"></select></label>
-        <label class="f" id="sub-wrap">Jenis kerosakan <span class="req">*</span><select id="f-sub"></select></label>
+        <label class="f"><span>Tarikh aduan diterima <span class="req">*</span></span><input type="date" id="f-tarikh"></label>
+        <label class="f"><span>Tarikh kerosakan <span class="req">*</span></span><input type="date" id="f-tarikh-rosak"><span class="hint">Tarikh kerosakan berlaku atau dikesan.</span></label>
+        <label class="f full"><span>Fasiliti pengadu <span class="req">*</span></span><select id="f-fasiliti"></select><span class="hint" id="fas-hint" hidden></span></label>
+        <label class="f full" id="kd-wrap" hidden><span>Klinik desa <span class="req">*</span></span><select id="f-kd"></select></label>
+        <label class="f full" id="fas-lain-wrap" hidden><span>Nyatakan fasiliti / unit <span class="req">*</span></span><input type="text" id="f-fas-lain" maxlength="80" placeholder="Nama fasiliti atau unit"></label>
+        <label class="f"><span>Lokasi kerosakan <span class="req">*</span></span><select id="f-lokasi"></select></label>
+        <label class="f"><span>Perincian lokasi <span class="req" id="lok-req" hidden>*</span></span><input type="text" id="f-lokasi-detail" maxlength="120" placeholder="Contoh: Bilik Rawatan 2, tingkat 1"></label>
+        <label class="f"><span>Kategori <span class="req">*</span></span><select id="f-kat"></select></label>
+        <label class="f" id="sub-wrap"><span>Jenis kerosakan <span class="req">*</span></span><select id="f-sub"></select></label>
         <div class="full inline-note" id="cold-note" hidden>Kerosakan peti sejuk vaksin atau cold chain: keutamaan ditetapkan sebagai Kritikal. Pastikan pelan kontingensi penyimpanan vaksin dijalankan serta-merta.</div>
-        <label class="f">No. siri / no. pendaftaran aset<input type="text" id="f-aset" maxlength="60" placeholder="Jika ada"><span class="hint">Boleh dibiarkan kosong untuk kerosakan bangunan.</span></label>
-        <label class="f">Dilaporkan oleh (pegawai di fasiliti)<input type="text" id="f-pelapor" maxlength="80" placeholder="Nama dan jawatan"></label>
-        <label class="f full">Keterangan kerosakan <span class="req">*</span><textarea id="f-ket" rows="4" maxlength="1500" placeholder="Apa yang rosak, sejak bila, kesan kepada perkhidmatan"></textarea><span class="hint" id="ket-hint">Minimum 15 aksara.</span></label>
+        <div class="full" role="radiogroup" aria-labelledby="ka-lbl" style="display:flex;flex-direction:column;gap:6px">
+          <span id="ka-lbl" style="font-weight:600;font-size:14px">Kategori aset <span class="req">*</span></span>
+          <div class="seg">
+            <label><input type="radio" name="ka" value="Aset Alih" id="ka-alih"><span><b>Aset alih</b><span>Peralatan, perabot, ICT, peralatan klinikal yang berdaftar. Didokumenkan dengan KEW.PA-10.</span></span></label>
+            <label><input type="radio" name="ka" value="Aset Tak Alih" id="ka-takalih"><span><b>Aset tak alih</b><span>Bangunan dan struktur: bumbung, dinding, paip, pendawaian, longkang.</span></span></label>
+          </div>
+          <span class="hint" id="ka-hint">Dipilih secara automatik ikut kategori. Tukar jika perlu, contohnya pendingin hawa yang berdaftar sebagai aset ialah aset alih.</span>
+        </div>
+        <fieldset class="kewpa" id="alih-wrap" hidden>
+          <legend>KEW.PA-10 Bahagian I</legend>
+          <label class="f"><span>1. Jenis aset <span class="req">*</span></span><input type="text" id="f-jenis-aset" maxlength="100" placeholder="Contoh: Pencetak HP LaserJet M404"></label>
+          <label class="f"><span>2. No. siri pendaftaran aset/komponen <span class="req">*</span></span><input type="text" id="f-aset" maxlength="60" placeholder="Contoh: KKM/PKDK/H/24/001"></label>
+          <label class="f">3. Pengguna terakhir<input type="text" id="f-pengguna" maxlength="80" placeholder="Nama pegawai yang terakhir menggunakan"></label>
+        </fieldset>
+        <label class="f full"><span>Nama dan jawatan pengadu <span class="req">*</span></span><input type="text" id="f-pelapor" maxlength="100" placeholder="Contoh: Siti Aminah, Jururawat U29"></label>
+        <label class="f full"><span>Perihal kerosakan <span class="req">*</span></span><textarea id="f-ket" rows="4" maxlength="1500" placeholder="Apa yang rosak, sejak bila, kesan kepada perkhidmatan"></textarea><span class="hint" id="ket-hint">Minimum 15 aksara.</span></label>
         <div class="full" role="radiogroup" aria-labelledby="prio-lbl" style="display:flex;flex-direction:column;gap:6px">
           <span id="prio-lbl" style="font-weight:600;font-size:14px">Tahap keutamaan <span class="req">*</span></span>
           <div class="prio">
@@ -303,10 +358,10 @@ td.num,th.num{text-align:right}
       <div class="panel"><div class="tbl-wrap"><table id="tbl-pengguna"></table></div></div>
       <form class="form" id="u-form" novalidate>
         <h3 class="full" id="u-title">Tambah pengguna</h3>
-        <label class="f">Emel rasmi <span class="req">*</span><input type="email" id="u-email" maxlength="120"></label>
-        <label class="f">Nama <span class="req">*</span><input type="text" id="u-nama" maxlength="80"></label>
-        <label class="f">Peranan <span class="req">*</span><select id="u-peranan"><option value="pentadbir">Pentadbir fasiliti</option><option value="pemantau">Pemantau</option><option value="admin">Admin</option></select></label>
-        <label class="f" id="u-fas-wrap">Fasiliti <span class="req">*</span><select id="u-fasiliti"></select></label>
+        <label class="f"><span>Emel rasmi <span class="req">*</span></span><input type="email" id="u-email" maxlength="120"></label>
+        <label class="f"><span>Nama <span class="req">*</span></span><input type="text" id="u-nama" maxlength="80"></label>
+        <label class="f"><span>Peranan <span class="req">*</span></span><select id="u-peranan"><option value="pentadbir">Pentadbir fasiliti</option><option value="pemantau">Pemantau</option><option value="admin">Admin</option></select></label>
+        <label class="f" id="u-fas-wrap"><span>Fasiliti <span class="req">*</span></span><select id="u-fasiliti"></select></label>
         <label class="f full" style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" id="u-aktif" checked style="width:auto"> Akaun aktif</label>
         <div class="full form-actions"><button class="btn primary" type="submit" id="u-save">Tambah pengguna</button><button class="btn" type="button" id="u-cancel" hidden>Batal edit</button><span class="err" id="u-err" role="alert"></span></div>
       </form>
@@ -321,6 +376,7 @@ td.num,th.num{text-align:right}
         <label class="f panel">Senarai fasiliti / unit<span class="hint">Satu nama setiap baris. Jika nama ditukar, aduan lama kekal dengan nama asal.</span><textarea id="s-fas" rows="12"></textarea></label>
         <div class="panel">
           <label class="f">Klinik desa yang beroperasi<span class="hint">Satu setiap baris, format: Nama klinik desa | KK induk. KK induk mesti sama dengan nama dalam senarai fasiliti.</span><textarea id="s-kd" rows="8"></textarea></label>
+          <label class="f">Lokasi kerosakan<span class="hint">Satu setiap baris. Kekalkan "Lain-lain" di hujung supaya pengguna boleh menyatakan lokasi lain.</span><textarea id="s-lok" rows="8"></textarea></label>
           <label class="f">Pihak rujukan tindakan<span class="hint">Satu setiap baris. Dicadangkan semasa kemas kini status.</span><textarea id="s-ruj" rows="6"></textarea></label>
           <label class="f">Had hari aduan dianggap lewat<input type="number" id="s-had" min="1" max="365" step="1" style="max-width:120px"><span class="hint">Aduan terbuka melebihi had ini ditanda merah.</span></label>
         </div>
@@ -334,9 +390,10 @@ td.num,th.num{text-align:right}
 <div id="scrim" class="scrim" hidden></div>
 <aside id="drawer" class="drawer" hidden aria-modal="true" role="dialog" aria-labelledby="d-title">
   <div class="drawer-head"><span class="tagno" id="d-no"></span><h3 id="d-title" style="font-size:17px">Butiran aduan</h3><button class="btn x" id="d-close" type="button">Tutup</button></div>
-  <div class="drawer-body"><div id="d-info"></div><div id="d-log"></div><div id="d-upd"></div><div id="d-del"></div></div>
+  <div class="drawer-body"><div id="d-info"></div><div id="d-kewpa"></div><div id="d-upd"></div><div id="d-log"></div><div id="d-del"></div></div>
 </aside>
 <div id="toast" class="toast" hidden role="status"></div>
+<section id="print-kewpa" aria-hidden="true"></section>
 
 <script src="app.js"></script>
 </body>

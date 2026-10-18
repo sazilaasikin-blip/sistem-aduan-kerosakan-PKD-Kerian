@@ -20,13 +20,18 @@ const HASH_ULANG = 300;                 // bilangan pusingan hash
 const LOGIN_MAKS = 8;                   // percubaan login maksimum ...
 const LOGIN_TEMPOH_SAAT = 300;          // ... dalam 5 minit
 
-const SH = { ADUAN: 'Aduan', LOG: 'Log', PENGGUNA: 'Pengguna', FASILITI: 'Fasiliti', KD: 'KlinikDesa', RUJUKAN: 'Rujukan', TETAPAN: 'Tetapan', AUDIT: 'Audit' };
+const SH = { ADUAN: 'Aduan', LOG: 'Log', PENGGUNA: 'Pengguna', FASILITI: 'Fasiliti', KD: 'KlinikDesa', LOKASI: 'Lokasi', RUJUKAN: 'Rujukan', TETAPAN: 'Tetapan', AUDIT: 'Audit' };
 const HEAD = {
-  Aduan: ['NoAduan', 'TarikhDiterima', 'Fasiliti', 'Lokasi', 'KategoriKod', 'Kategori', 'JenisKerosakan', 'NoAset', 'Keterangan', 'Keutamaan', 'DilaporkanOleh', 'Status', 'DirujukKepada', 'TarikhSelesai', 'DidaftarOleh', 'DidaftarPada', 'DikemaskiniOleh', 'DikemaskiniPada'],
+  // Susunan lajur mengikut KEW.PA-10: Bahagian I (pengadu), B2_ = Bahagian II (Pegawai Aset/Teknikal), B3_ = Bahagian III (Ketua Jabatan)
+  Aduan: ['NoAduan', 'TarikhDiterima', 'Status', 'Keutamaan', 'FasilitiPengadu', 'Lokasi', 'LokasiPerincian', 'KategoriKod', 'Kategori',
+    'JenisKerosakan', 'KategoriAset', 'JenisAset', 'NoAset', 'PenggunaTerakhir', 'TarikhKerosakan', 'Keterangan', 'DilaporkanOleh',
+    'DirujukKepada', 'TarikhSelesai', 'B2_KosTerdahuluRM', 'B2_AnggaranKosRM', 'B2_SyorUlasan', 'B2_NamaJawatan', 'B2_Tarikh',
+    'B3_Keputusan', 'B3_Ulasan', 'B3_NamaJawatan', 'B3_Tarikh', 'DidaftarOleh', 'DidaftarPada', 'DikemaskiniOleh', 'DikemaskiniPada'],
   Log: ['NoAduan', 'Masa', 'TarikhTindakan', 'Status', 'DirujukKepada', 'Catatan', 'Oleh'],
   Pengguna: ['Email', 'Nama', 'Peranan', 'Fasiliti', 'Aktif', 'Salt', 'Hash', 'TukarKataLaluan', 'DiciptaPada', 'LogMasukTerakhir'],
   Fasiliti: ['Nama'],
   KlinikDesa: ['Nama', 'KKInduk'],
+  Lokasi: ['Nama'],
   Rujukan: ['Nama'],
   Tetapan: ['Kunci', 'Nilai'],
   Audit: ['Masa', 'Email', 'Tindakan', 'Butiran']
@@ -49,6 +54,16 @@ const PERANAN = ['admin', 'pentadbir', 'pemantau'];
 const PILIHAN_KD = 'Klinik Desa';
 const PILIHAN_LAIN = 'Lain-lain';
 const PILIHAN_KHAS = [PILIHAN_KD, PILIHAN_LAIN];
+// Kategori aset (dokumentasi): aset alih menggunakan KEW.PA-10
+const ASET_ALIH = 'Aset Alih';
+const ASET_TAK_ALIH = 'Aset Tak Alih';
+const KEPUTUSAN_KJ = ['Diluluskan', 'Tidak Diluluskan'];
+const LOKASI_LAIN = 'Lain-lain';
+const LOKASI_ASAL = ['Kaunter pendaftaran', 'Ruang menunggu', 'Bilik rawatan / prosedur', 'Bilik doktor / konsultasi',
+  'Bilik KKIA (ibu dan anak)', 'Bilik imunisasi / vaksin', 'Bilik kecemasan / rawatan segera', 'Farmasi / stor ubat', 'Makmal',
+  'Klinik pergigian', 'Bilik X-ray / pengimejan', 'Tandas awam', 'Tandas kakitangan', 'Pejabat / bilik pentadbiran',
+  'Bilik mesyuarat / latihan', 'Stor am', 'Surau', 'Pantri', 'Kawasan luar (laluan, parkir, pagar, longkang)',
+  'Bumbung / struktur bangunan', LOKASI_LAIN];
 
 /* =========================================================
  * PINTU MASUK WEB APP
@@ -103,6 +118,7 @@ function route_(b) {
     case 'butiran': return butiran_(s, b);
     case 'daftar': perlu_(s, ['admin', 'pentadbir']); return daftar_(s, b.data || {});
     case 'kemaskini': perlu_(s, ['admin', 'pentadbir']); return kemaskini_(s, b.data || {});
+    case 'kewpa': perlu_(s, ['admin']); return kewpa_(s, b.data || {});
     case 'padam': perlu_(s, ['admin']); return padam_(s, b);
     case 'simpanTetapan': perlu_(s, ['admin']); return simpanTetapan_(s, b.data || {});
     case 'senaraiPengguna': perlu_(s, ['admin']); return { pengguna: senaraiPengguna_() };
@@ -160,6 +176,20 @@ function rowFrom_(head, obj) {
     if (v === true || v === false) return v;
     return safe_(v);
   });
+}
+
+/** Tambah satu rekod mengikut susunan header sebenar dalam sheet */
+function tambahBaris_(name, rec) {
+  const sh = sheet_(name);
+  const head = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
+  sh.appendRow(rowFrom_(head, rec));
+}
+
+function wang_(v, label) {
+  if (v === '' || v == null) return '';
+  const n = Number(String(v).replace(/,/g, ''));
+  if (!isFinite(n) || n < 0 || n > 100000000) throw appErr_('VALIDATION', label + ' mesti nombor RM yang sah.');
+  return n.toFixed(2);
 }
 
 function nowIso_() { return new Date().toISOString(); }
@@ -358,11 +388,14 @@ function dalamSkop_(s, fasiliti, peta) {
 
 function aduanAwam_(r) {
   return {
-    noAduan: r.NoAduan, tarikh: r.TarikhDiterima, fasiliti: r.Fasiliti, lokasi: r.Lokasi,
-    kategoriKod: String(r.KategoriKod), kategori: r.Kategori, jenis: r.JenisKerosakan, noAset: r.NoAset,
-    keterangan: r.Keterangan, keutamaan: r.Keutamaan, pelapor: r.DilaporkanOleh, status: r.Status,
-    dirujukKepada: r.DirujukKepada, tarikhSelesai: r.TarikhSelesai, didaftarPada: r.DidaftarPada,
-    dikemaskiniPada: r.DikemaskiniPada
+    noAduan: r.NoAduan, tarikh: r.TarikhDiterima, fasiliti: r.FasilitiPengadu, lokasi: r.Lokasi, lokasiPerincian: r.LokasiPerincian,
+    kategoriKod: String(r.KategoriKod), kategori: r.Kategori, jenis: r.JenisKerosakan,
+    kategoriAset: r.KategoriAset, jenisAset: r.JenisAset, noAset: r.NoAset, penggunaTerakhir: r.PenggunaTerakhir,
+    tarikhKerosakan: r.TarikhKerosakan, keterangan: r.Keterangan, keutamaan: r.Keutamaan, pelapor: r.DilaporkanOleh,
+    status: r.Status, dirujukKepada: r.DirujukKepada, tarikhSelesai: r.TarikhSelesai,
+    b2: { kosTerdahulu: r.B2_KosTerdahuluRM, anggaranKos: r.B2_AnggaranKosRM, syor: r.B2_SyorUlasan, namaJawatan: r.B2_NamaJawatan, tarikh: r.B2_Tarikh },
+    b3: { keputusan: r.B3_Keputusan, ulasan: r.B3_Ulasan, namaJawatan: r.B3_NamaJawatan, tarikh: r.B3_Tarikh },
+    didaftarPada: r.DidaftarPada, dikemaskiniPada: r.DikemaskiniPada
   };
 }
 
@@ -372,16 +405,17 @@ function tetapan_() {
   const klinikDesa = table_(SH.KD).rows
     .filter(function (r) { return r.Nama; })
     .map(function (r) { return { nama: r.Nama, induk: r.KKInduk }; });
+  const lokasi = table_(SH.LOKASI).rows.map(function (r) { return r.Nama; }).filter(String);
   const t = table_(SH.TETAPAN).rows;
   const had = Number((t.find(function (r) { return r.Kunci === 'HadHari'; }) || {}).Nilai) || 14;
-  return { fasiliti: fasiliti, klinikDesa: klinikDesa, rujukan: rujukan, hadHari: had };
+  return { fasiliti: fasiliti, klinikDesa: klinikDesa, lokasi: lokasi, rujukan: rujukan, hadHari: had };
 }
 
 function muat_(s) {
   const tet = tetapan_();
   const peta = petaKd_(tet.klinikDesa);
   const aduan = table_(SH.ADUAN).rows
-    .filter(function (r) { return r.NoAduan && dalamSkop_(s, r.Fasiliti, peta); })
+    .filter(function (r) { return r.NoAduan && dalamSkop_(s, r.FasilitiPengadu, peta); })
     .map(aduanAwam_)
     .sort(function (a, b) { return String(b.didaftarPada).localeCompare(String(a.didaftarPada)); });
   return { user: awam_(s), tetapan: tet, aduan: aduan, kategori: KATEGORI };
@@ -395,7 +429,7 @@ function cariAduan_(no) {
 
 function butiran_(s, b) {
   const r = cariAduan_(b.noAduan);
-  if (!r.a || !dalamSkop_(s, r.a.Fasiliti)) throw appErr_('NOT_FOUND', 'Aduan tidak dijumpai.');
+  if (!r.a || !dalamSkop_(s, r.a.FasilitiPengadu)) throw appErr_('NOT_FOUND', 'Aduan tidak dijumpai.');
   const nama = {};
   table_(SH.PENGGUNA).rows.forEach(function (u) { nama[String(u.Email).toLowerCase()] = u.Nama; });
   const log = table_(SH.LOG).rows
@@ -422,7 +456,11 @@ function daftar_(s, d) {
   if (!dalamSkop_(s, fasiliti, petaKd_(tet.klinikDesa))) {
     throw appErr_('FORBIDDEN', 'Anda hanya boleh mendaftar aduan untuk ' + s.fasiliti + ' dan klinik desa di bawahnya.');
   }
-  const lokasi = teks_(d.lokasi, 120, 'Lokasi', true);
+  const lokasi = teks_(d.lokasi, 100, 'Lokasi kerosakan', true);
+  if (tet.lokasi.indexOf(lokasi) === -1) throw appErr_('VALIDATION', 'Pilih lokasi kerosakan daripada senarai.');
+  const lokasiPerincian = teks_(d.lokasiPerincian, 120, 'Perincian lokasi', lokasi === LOKASI_LAIN);
+  const tarikhKerosakan = tarikh_(d.tarikhKerosakan, 'Tarikh kerosakan');
+  if (tarikhKerosakan > tarikh) throw appErr_('VALIDATION', 'Tarikh kerosakan tidak boleh selepas tarikh aduan diterima.');
   const kod = String(d.kategoriKod || '');
   const kat = KATEGORI[kod];
   if (!kat) throw appErr_('VALIDATION', 'Kategori tidak sah.');
@@ -434,8 +472,13 @@ function daftar_(s, d) {
   let keutamaan = String(d.keutamaan || '');
   if (KEUTAMAAN.indexOf(keutamaan) === -1) throw appErr_('VALIDATION', 'Tahap keutamaan tidak sah.');
   if (jenis === JENIS_COLD) keutamaan = 'Kritikal';
-  const noAset = teks_(d.noAset, 60, 'No. aset', false);
-  const pelapor = teks_(d.pelapor, 80, 'Dilaporkan oleh', false);
+  const kategoriAset = String(d.kategoriAset || '');
+  if ([ASET_ALIH, ASET_TAK_ALIH].indexOf(kategoriAset) === -1) throw appErr_('VALIDATION', 'Pilih kategori aset: aset alih atau aset tak alih.');
+  const alih = kategoriAset === ASET_ALIH;
+  const jenisAset = alih ? teks_(d.jenisAset, 100, 'Jenis aset', true) : '';
+  const noAset = alih ? teks_(d.noAset, 60, 'No. siri pendaftaran aset', true) : teks_(d.noAset, 60, 'No. aset', false);
+  const penggunaTerakhir = alih ? teks_(d.penggunaTerakhir, 80, 'Pengguna terakhir', false) : '';
+  const pelapor = teks_(d.pelapor, 100, 'Nama dan jawatan pengadu', true);
 
   return withLock_(function () {
     const tahun = tarikh.slice(0, 4);
@@ -445,14 +488,14 @@ function daftar_(s, d) {
     const no = 'KRN-' + tahun + '-' + ('0000' + seq).slice(-4);
     const masa = nowIso_();
     const rec = {
-      NoAduan: no, TarikhDiterima: tarikh, Fasiliti: fasiliti, Lokasi: lokasi, KategoriKod: kod, Kategori: kat.nama,
-      JenisKerosakan: jenis, NoAset: noAset, Keterangan: keterangan, Keutamaan: keutamaan, DilaporkanOleh: pelapor,
-      Status: 'Baru', DirujukKepada: '', TarikhSelesai: '', DidaftarOleh: s.email, DidaftarPada: masa,
-      DikemaskiniOleh: s.email, DikemaskiniPada: masa
+      NoAduan: no, TarikhDiterima: tarikh, Status: 'Baru', Keutamaan: keutamaan, FasilitiPengadu: fasiliti,
+      Lokasi: lokasi, LokasiPerincian: lokasiPerincian, KategoriKod: kod, Kategori: kat.nama, JenisKerosakan: jenis,
+      KategoriAset: kategoriAset, JenisAset: jenisAset, NoAset: noAset, PenggunaTerakhir: penggunaTerakhir,
+      TarikhKerosakan: tarikhKerosakan, Keterangan: keterangan, DilaporkanOleh: pelapor, DirujukKepada: '', TarikhSelesai: '',
+      DidaftarOleh: s.email, DidaftarPada: masa, DikemaskiniOleh: s.email, DikemaskiniPada: masa
     };
-    const sh = sheet_(SH.ADUAN);
-    sh.appendRow(rowFrom_(HEAD.Aduan, rec));
-    sheet_(SH.LOG).appendRow(rowFrom_(HEAD.Log, { NoAduan: no, Masa: masa, TarikhTindakan: tarikh, Status: 'Baru', DirujukKepada: '', Catatan: 'Aduan didaftarkan', Oleh: s.email }));
+    tambahBaris_(SH.ADUAN, rec);
+    tambahBaris_(SH.LOG, { NoAduan: no, Masa: masa, TarikhTindakan: tarikh, Status: 'Baru', DirujukKepada: '', Catatan: 'Aduan didaftarkan' + (alih ? ' (aset alih, KEW.PA-10)' : ''), Oleh: s.email });
     audit_(s.email, 'DAFTAR_ADUAN', no);
     return { noAduan: no };
   });
@@ -469,7 +512,7 @@ function kemaskini_(s, d) {
 
   return withLock_(function () {
     const r = cariAduan_(d.noAduan);
-    if (!r.a || !dalamSkop_(s, r.a.Fasiliti)) throw appErr_('NOT_FOUND', 'Aduan tidak dijumpai.');
+    if (!r.a || !dalamSkop_(s, r.a.FasilitiPengadu)) throw appErr_('NOT_FOUND', 'Aduan tidak dijumpai.');
     if (tarikh < r.a.TarikhDiterima) throw appErr_('VALIDATION', 'Tarikh tindakan tidak boleh sebelum tarikh aduan diterima.');
     if (status === r.a.Status && rujuk === r.a.DirujukKepada && !catatan) throw appErr_('VALIDATION', 'Tiada perubahan untuk disimpan.');
     const h = r.t.head, row = r.a._row, masa = nowIso_();
@@ -479,11 +522,59 @@ function kemaskini_(s, d) {
     set('TarikhSelesai', status === 'Selesai' ? tarikh : '');
     set('DikemaskiniOleh', s.email);
     set('DikemaskiniPada', masa);
-    sheet_(SH.LOG).appendRow(rowFrom_(HEAD.Log, {
+    tambahBaris_(SH.LOG, {
       NoAduan: r.a.NoAduan, Masa: masa, TarikhTindakan: tarikh, Status: status,
       DirujukKepada: rujuk !== r.a.DirujukKepada ? rujuk : '', Catatan: catatan, Oleh: s.email
-    }));
+    });
     audit_(s.email, 'KEMASKINI_ADUAN', r.a.NoAduan + ' → ' + status);
+    return {};
+  });
+}
+
+/** KEW.PA-10 Bahagian II (Pegawai Aset/Teknikal) dan Bahagian III (Ketua Jabatan) — admin sahaja */
+function kewpa_(s, d) {
+  const b2 = {
+    B2_KosTerdahuluRM: wang_(d.kosTerdahulu, 'Jumlah kos penyelenggaraan terdahulu'),
+    B2_AnggaranKosRM: wang_(d.anggaranKos, 'Anggaran kos penyelenggaraan'),
+    B2_SyorUlasan: teks_(d.syor, 800, 'Syor dan ulasan', false),
+    B2_NamaJawatan: teks_(d.b2Nama, 100, 'Nama dan jawatan (Bahagian II)', false),
+    B2_Tarikh: d.b2Tarikh ? tarikh_(d.b2Tarikh, 'Tarikh Bahagian II') : ''
+  };
+  const adaB2 = b2.B2_KosTerdahuluRM !== '' || b2.B2_AnggaranKosRM !== '' || b2.B2_SyorUlasan || b2.B2_NamaJawatan || b2.B2_Tarikh;
+  if (adaB2 && (!b2.B2_NamaJawatan || !b2.B2_Tarikh)) throw appErr_('VALIDATION', 'Bahagian II: isi nama dan jawatan serta tarikh.');
+  const keputusan = String(d.keputusan || '');
+  if (keputusan && KEPUTUSAN_KJ.indexOf(keputusan) === -1) throw appErr_('VALIDATION', 'Keputusan Ketua Jabatan tidak sah.');
+  const b3 = {
+    B3_Keputusan: keputusan,
+    B3_Ulasan: teks_(d.ulasanKJ, 500, 'Ulasan Ketua Jabatan', false),
+    B3_NamaJawatan: teks_(d.b3Nama, 100, 'Nama dan jawatan (Bahagian III)', !!keputusan),
+    B3_Tarikh: keputusan ? tarikh_(d.b3Tarikh, 'Tarikh Bahagian III') : ''
+  };
+  if (keputusan && !adaB2) throw appErr_('VALIDATION', 'Lengkapkan Bahagian II sebelum merekod keputusan Ketua Jabatan.');
+
+  return withLock_(function () {
+    const r = cariAduan_(d.noAduan);
+    if (!r.a) throw appErr_('NOT_FOUND', 'Aduan tidak dijumpai.');
+    if (r.a.KategoriAset !== ASET_ALIH) throw appErr_('VALIDATION', 'KEW.PA-10 hanya untuk aduan aset alih.');
+    if (b2.B2_Tarikh && b2.B2_Tarikh < r.a.TarikhDiterima) throw appErr_('VALIDATION', 'Tarikh Bahagian II tidak boleh sebelum tarikh aduan diterima.');
+    if (b3.B3_Tarikh && b3.B3_Tarikh < b2.B2_Tarikh) throw appErr_('VALIDATION', 'Tarikh Bahagian III tidak boleh sebelum tarikh Bahagian II.');
+    const h = r.t.head, row = r.a._row, masa = nowIso_();
+    const semua = Object.assign({}, b2, b3, { DikemaskiniOleh: s.email, DikemaskiniPada: masa });
+    Object.keys(semua).forEach(function (col) {
+      const i = h.indexOf(col);
+      if (i === -1) throw appErr_('NOT_SETUP', 'Lajur ' + col + ' tiada dalam sheet Aduan. Jalankan Setup awal sistem sekali lagi.');
+      r.t.sh.getRange(row, i + 1).setValue(safe_(semua[col]));
+    });
+    const nota = [];
+    if (adaB2 && (r.a.B2_NamaJawatan !== b2.B2_NamaJawatan || r.a.B2_AnggaranKosRM !== b2.B2_AnggaranKosRM || r.a.B2_SyorUlasan !== b2.B2_SyorUlasan || r.a.B2_KosTerdahuluRM !== b2.B2_KosTerdahuluRM || r.a.B2_Tarikh !== b2.B2_Tarikh)) {
+      nota.push('KEW.PA-10 Bahagian II dikemas kini' + (b2.B2_AnggaranKosRM ? ' (anggaran RM' + b2.B2_AnggaranKosRM + ')' : ''));
+    }
+    if (keputusan && (r.a.B3_Keputusan !== keputusan || r.a.B3_Tarikh !== b3.B3_Tarikh)) nota.push('KEW.PA-10 Bahagian III: ' + keputusan);
+    if (!keputusan && r.a.B3_Keputusan) nota.push('KEW.PA-10 Bahagian III dikosongkan');
+    if (nota.length) {
+      tambahBaris_(SH.LOG, { NoAduan: r.a.NoAduan, Masa: masa, TarikhTindakan: b3.B3_Tarikh || b2.B2_Tarikh || today_(), Status: r.a.Status, DirujukKepada: '', Catatan: nota.join('. '), Oleh: s.email });
+    }
+    audit_(s.email, 'KEWPA10', r.a.NoAduan + (keputusan ? ' → ' + keputusan : ''));
     return {};
   });
 }
@@ -498,7 +589,7 @@ function padam_(s, b) {
       .map(function (l) { return l._row; })
       .sort(function (x, y) { return y - x; })
       .forEach(function (row) { lg.sh.deleteRow(row); });
-    audit_(s.email, 'PADAM_ADUAN', r.a.NoAduan + ' (' + r.a.Fasiliti + ')');
+    audit_(s.email, 'PADAM_ADUAN', r.a.NoAduan + ' (' + r.a.FasilitiPengadu + ')');
     return {};
   });
 }
@@ -525,6 +616,8 @@ function tulisSenarai_(name, list) {
 function simpanTetapan_(s, d) {
   const fasiliti = senaraiBersih_(d.fasiliti, 'Nama fasiliti');
   const rujukan = senaraiBersih_(d.rujukan, 'Pihak rujukan');
+  const lokasi = senaraiBersih_(d.lokasi, 'Lokasi');
+  if (!lokasi.length) throw appErr_('VALIDATION', 'Senarai lokasi tidak boleh kosong.');
   const kdSeen = {};
   const klinikDesa = (Array.isArray(d.klinikDesa) ? d.klinikDesa : []).map(function (k) {
     return { nama: teks_(k && k.nama, 100, 'Nama klinik desa', false), induk: teks_(k && k.induk, 100, 'KK induk', false) };
@@ -538,6 +631,7 @@ function simpanTetapan_(s, d) {
   return withLock_(function () {
     tulisSenarai_(SH.FASILITI, fasiliti);
     tulisSenarai_(SH.RUJUKAN, rujukan);
+    tulisSenarai_(SH.LOKASI, lokasi);
     const kdSh = sheet_(SH.KD);
     const kdLast = kdSh.getLastRow();
     if (kdLast > 1) kdSh.getRange(2, 1, kdLast - 1, 2).clearContent();
@@ -545,7 +639,7 @@ function simpanTetapan_(s, d) {
     const t = table_(SH.TETAPAN);
     const r = t.rows.find(function (x) { return x.Kunci === 'HadHari'; });
     if (r) t.sh.getRange(r._row, 2).setValue(had); else t.sh.appendRow(['HadHari', had]);
-    audit_(s.email, 'SIMPAN_TETAPAN', fasiliti.length + ' fasiliti, ' + klinikDesa.length + ' klinik desa, had ' + had + ' hari');
+    audit_(s.email, 'SIMPAN_TETAPAN', fasiliti.length + ' fasiliti, ' + klinikDesa.length + ' klinik desa, ' + lokasi.length + ' lokasi, had ' + had + ' hari');
     return { tetapan: tetapan_() };
   });
 }
@@ -584,10 +678,10 @@ function simpanPengguna_(s, d) {
     if (d.baru !== true) throw appErr_('NOT_FOUND', 'Pengguna tidak dijumpai.');
     const temp = kataLaluanSementara_();
     const salt = saltBaru_();
-    r.t.sh.appendRow(rowFrom_(HEAD.Pengguna, {
+    tambahBaris_(SH.PENGGUNA, {
       Email: email, Nama: nama, Peranan: peranan, Fasiliti: fasiliti, Aktif: aktif, Salt: salt, Hash: hash_(temp, salt),
       TukarKataLaluan: true, DiciptaPada: nowIso_(), LogMasukTerakhir: ''
-    }));
+    });
     audit_(s.email, 'TAMBAH_PENGGUNA', email + ' (' + peranan + ')');
     return { pengguna: senaraiPengguna_(), kataLaluanSementara: temp, email: email };
   });
@@ -637,11 +731,21 @@ function setup() {
     let sh = ss.getSheetByName(name);
     if (!sh) sh = ss.insertSheet(name);
     const head = HEAD[name];
-    const cur = sh.getRange(1, 1, 1, head.length).getValues()[0];
-    if (cur.join('') === '') sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold');
+    const lastCol = Math.max(sh.getLastColumn(), 1);
+    const cur = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
+    if (cur.join('') === '') {
+      sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold');
+    } else {
+      // Sheet sedia ada: tambah lajur baharu di hujung tanpa mengubah data lama
+      const tiada = head.filter(function (h) { return cur.indexOf(h) === -1; });
+      if (tiada.length) {
+        if (sh.getMaxColumns() < cur.length + tiada.length) sh.insertColumnsAfter(sh.getMaxColumns(), cur.length + tiada.length - sh.getMaxColumns());
+        sh.getRange(1, cur.length + 1, 1, tiada.length).setValues([tiada]).setFontWeight('bold');
+      }
+    }
     sh.setFrozenRows(1);
     // Simpan semua sebagai teks supaya tarikh tidak ditukar automatik oleh Sheets
-    sh.getRange(1, 1, sh.getMaxRows(), head.length).setNumberFormat('@');
+    sh.getRange(1, 1, sh.getMaxRows(), Math.max(sh.getLastColumn(), head.length)).setNumberFormat('@');
   });
   ['Sheet1', 'Helaian1'].forEach(function (n) {
     const sh = ss.getSheetByName(n);
@@ -653,6 +757,7 @@ function setup() {
 
   const tet = table_(SH.TETAPAN);
   if (!tet.rows.find(function (r) { return r.Kunci === 'HadHari'; })) tet.sh.appendRow(['HadHari', 14]);
+  if (!table_(SH.LOKASI).rows.length) tulisSenarai_(SH.LOKASI, LOKASI_ASAL);
 
   // Sembunyikan kolum Salt dan Hash supaya tidak terpapar semasa sheet dibuka
   const pg = sheet_(SH.PENGGUNA);
@@ -665,10 +770,10 @@ function setup() {
   if (!email) throw new Error('Tidak dapat membaca emel akaun. Jalankan setup() semasa log masuk ke akaun Google pemilik.');
   const temp = kataLaluanSementara_();
   const salt = saltBaru_();
-  pg.appendRow(rowFrom_(HEAD.Pengguna, {
+  tambahBaris_(SH.PENGGUNA, {
     Email: email, Nama: 'Pentadbir Sistem', Peranan: 'admin', Fasiliti: '', Aktif: true, Salt: salt,
     Hash: hash_(temp, salt), TukarKataLaluan: true, DiciptaPada: nowIso_(), LogMasukTerakhir: ''
-  }));
+  });
   audit_(email, 'SETUP', 'Admin pertama dicipta');
   console.log('Admin pertama: ' + email + ' | kata laluan sementara: ' + temp + ' (tukar semasa log masuk pertama)');
   return { email: email, kataLaluanSementara: temp };

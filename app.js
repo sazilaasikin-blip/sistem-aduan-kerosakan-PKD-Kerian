@@ -21,6 +21,13 @@ const PRIO = ['Kritikal','Tinggi','Biasa'];
 const BULAN = ['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
 const PERANAN_LABEL = {admin:'Admin', pentadbir:'Pentadbir fasiliti', pemantau:'Pemantau'};
 const katName = k => (KATEGORI.find(x=>x.k===String(k))||{n:'—'}).n;
+const ASET_ALIH='Aset Alih', ASET_TAK_ALIH='Aset Tak Alih', LOKASI_LAIN='Lain-lain';
+/* Kategori aset lalai ikut kategori kerosakan; pengguna boleh tukar */
+const ASET_LALAI = {'1':ASET_TAK_ALIH, '2':ASET_ALIH, '3':ASET_ALIH, '4':ASET_ALIH};
+const isAlih = a => a && a.kategoriAset===ASET_ALIH;
+const lulusKJ = a => a && a.b3 && a.b3.keputusan==='Diluluskan';
+const lokasiPenuh = a => [a.lokasi, a.lokasiPerincian].filter(Boolean).join(' · ');
+const rm = v => (v===''||v==null) ? '' : 'RM ' + Number(v).toLocaleString('en-MY',{minimumFractionDigits:2, maximumFractionDigits:2});
 
 /* ---------- Utiliti ---------- */
 const $ = id => document.getElementById(id);
@@ -71,7 +78,7 @@ async function api(action, payload){
 }
 
 /* ---------- State ---------- */
-let ME=null, ADUAN=[], TET={fasiliti:[], klinikDesa:[], rujukan:[], hadHari:14}, PENGGUNA=[], openNo=null, editEmail=null;
+let ME=null, ADUAN=[], TET={fasiliti:[], klinikDesa:[], lokasi:[], rujukan:[], hadHari:14}, PENGGUNA=[], openNo=null, editEmail=null;
 const had = () => Number(TET.hadHari)||14;
 const isAdmin = () => ME && ME.peranan==='admin';
 const bolehTulis = () => ME && (ME.peranan==='admin' || ME.peranan==='pentadbir');
@@ -129,7 +136,7 @@ $('pw-form').addEventListener('submit', async e=>{
 /* ---------- Muat data ---------- */
 async function muat(){
   const r = await api('muat');
-  ME=r.user; ADUAN=r.aduan||[]; TET=Object.assign({fasiliti:[],klinikDesa:[],rujukan:[],hadHari:14}, r.tetapan||{});
+  ME=r.user; ADUAN=r.aduan||[]; TET=Object.assign({fasiliti:[],klinikDesa:[],lokasi:[],rujukan:[],hadHari:14}, r.tetapan||{});
   renderAll();
 }
 async function mulaApp(){
@@ -198,6 +205,25 @@ function syncPilihan(){
   if (v!==LAIN_PILIHAN) $('f-fas-lain').value='';
 }
 $('f-fasiliti').addEventListener('change', syncPilihan);
+function fillLokasi(){
+  const sel=$('f-lokasi'), keep=sel.value, list=TET.lokasi||[];
+  sel.replaceChildren(opt('', list.length?'Pilih lokasi':'Belum ada senarai lokasi'), ...list.map(l=>opt(l,l)));
+  if (list.includes(keep)) sel.value=keep;
+  syncLokasi();
+}
+function syncLokasi(){
+  const lain=$('f-lokasi').value===LOKASI_LAIN;
+  $('lok-req').hidden=!lain;
+  $('f-lokasi-detail').placeholder = lain ? 'Nyatakan lokasi kerosakan' : 'Contoh: Bilik Rawatan 2, tingkat 1';
+}
+$('f-lokasi').addEventListener('change', syncLokasi);
+const kaPilih = () => (document.querySelector('input[name="ka"]:checked')||{}).value || '';
+function syncAset(){
+  const alih = kaPilih()===ASET_ALIH;
+  $('alih-wrap').hidden = !alih;
+  if (!alih){ ['f-jenis-aset','f-aset','f-pengguna'].forEach(id=>$(id).value=''); }
+}
+document.querySelectorAll('input[name="ka"]').forEach(r=>r.addEventListener('change', syncAset));
 
 /* ---------- Ringkasan ---------- */
 const kpi = (cls,n,l,s) => h('div',{class:'kpi '+(cls||'')}, h('div',{class:'n'},n), h('div',{class:'l'},l), s?h('div',{class:'s'},s):null);
@@ -207,7 +233,9 @@ function renderRingkasan(){
   $('kpi-now').replaceChildren(
     kpi('info', open.length, 'Aduan terbuka', `${baru.length} belum diambil tindakan (status Baru)`),
     kpi(krit.length?'crit':'', krit.length, 'Kritikal masih terbuka', krit.length?'Semak segera':'Tiada'),
-    kpi(lewat.length?'warn':'', lewat.length, `Terbuka melebihi ${had()} hari`, open.length?`${Math.round(lewat.length/open.length*100)}% daripada aduan terbuka`:'—'));
+    kpi(lewat.length?'warn':'', lewat.length, `Terbuka melebihi ${had()} hari`, open.length?`${Math.round(lewat.length/open.length*100)}% daripada aduan terbuka`:'—'),
+    (()=>{ const tunggu=open.filter(a=>isAlih(a) && !a.b3?.keputusan), alihOpen=open.filter(isAlih).length;
+      return kpi(tunggu.length?'warn':'', tunggu.length, 'Menunggu keputusan KEW.PA-10', alihOpen?`Daripada ${alihOpen} aduan aset alih terbuka`:'Tiada aduan aset alih terbuka'); })());
   const y=$('r-tahun').value, m=$('r-bulan').value;
   $('period-title').textContent = m ? `${BULAN[Number(m)-1]} ${y}` : `Tahun ${y}`;
   const inP = ADUAN.filter(a=>a.tarikh && String(a.tarikh).slice(0,4)===y && (!m || String(a.tarikh).slice(5,7)===m));
@@ -237,14 +265,15 @@ function renderRingkasan(){
 
 /* ---------- Senarai ---------- */
 function filtered(){
-  const q=$('l-q').value.trim().toLowerCase(), st=$('l-status').value, k=$('l-kat').value, f=$('l-fas').value, p=$('l-pri').value, y=$('l-tahun').value;
+  const q=$('l-q').value.trim().toLowerCase(), st=$('l-status').value, k=$('l-kat').value, ka=$('l-aset').value, f=$('l-fas').value, p=$('l-pri').value, y=$('l-tahun').value;
   let list=ADUAN.filter(a=>{
     if (st==='terbuka' ? !OPEN.has(a.status) : (st && a.status!==st)) return false;
     if (k && String(a.kategoriKod)!==k) return false;
+    if (ka && a.kategoriAset!==ka) return false;
     if (f && a.fasiliti!==f) return false;
     if (p && a.keutamaan!==p) return false;
     if (y && String(a.tarikh).slice(0,4)!==y) return false;
-    if (q && ![a.noAduan,a.lokasi,a.noAset,a.keterangan,a.jenis,a.fasiliti,a.pelapor].join(' ').toLowerCase().includes(q)) return false;
+    if (q && ![a.noAduan,a.lokasi,a.lokasiPerincian,a.noAset,a.jenisAset,a.keterangan,a.jenis,a.fasiliti,a.pelapor].join(' ').toLowerCase().includes(q)) return false;
     return true;
   });
   const s=$('l-sort').value;
@@ -259,23 +288,25 @@ function renderSenarai(){
   if (!list.length){ box.replaceChildren(h('div',{class:'empty'}, h('b',null,'Tiada aduan sepadan dengan tapisan'), h('span',{class:'muted'},'Tukar status kepada "Semua" atau kosongkan carian.'))); return; }
   box.replaceChildren(...list.map(a=>{ const u=umur(a), late=OPEN.has(a.status)&&u>had();
     return h('button',{class:`row p-${a.keutamaan}`,type:'button',onclick:()=>bukaButiran(a.noAduan)},
-      h('div',{class:'c'}, h('span',{class:'tagno'},a.noAduan), h('span',{class:'t2'},fmtD(a.tarikh))),
-      h('div',{class:'c c-fas'}, h('span',{class:'t1'},a.fasiliti||'—'), h('span',{class:'t2'},a.lokasi||'')),
-      h('div',{class:'c c-kat'}, h('span',{class:'t1'},a.jenis||katName(a.kategoriKod)), h('span',{class:'t2'},a.keterangan||'')),
+      h('div',{class:'c'}, h('span',{class:'tagno'},a.noAduan), h('span',{class:'t2'},fmtD(a.tarikh)), a.kategoriAset?h('span',{class:'chip'+(isAlih(a)?' alih':'')}, isAlih(a)?'Aset alih':'Aset tak alih'):null),
+      h('div',{class:'c c-fas'}, h('span',{class:'t1'},a.fasiliti||'—'), h('span',{class:'t2'},lokasiPenuh(a))),
+      h('div',{class:'c c-kat'}, h('span',{class:'t1'},isAlih(a)&&a.jenisAset?a.jenisAset:(a.jenis||katName(a.kategoriKod))), h('span',{class:'t2'},a.keterangan||'')),
       h('div',{class:'c c-pri'}, h('span',{class:'pr pr-'+a.keutamaan},a.keutamaan)),
       h('div',{class:'c c-sts'}, h('span',{class:'pill '+stCls(a.status)},a.status)),
       h('div',{class:'age'+(late?' late':'')}, a.status==='Dibatalkan'?'—':u, h('small',null,a.status==='Selesai'?'hari selesai':(a.status==='Dibatalkan'?'':'hari terbuka')))); }));
 }
-['l-q','l-status','l-kat','l-fas','l-pri','l-tahun','l-sort'].forEach(id=>$(id).addEventListener('input',renderSenarai));
+['l-q','l-status','l-kat','l-aset','l-fas','l-pri','l-tahun','l-sort'].forEach(id=>$(id).addEventListener('input',renderSenarai));
 ['r-bulan','r-tahun'].forEach(id=>$(id).addEventListener('input',renderRingkasan));
 
 /* ---------- CSV ---------- */
 const csvCell = v => { let s=v==null?'':String(v); if(/^[=+\-@\t\r]/.test(s)) s="'"+s; return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
 $('btn-csv').addEventListener('click', ()=>{
   const list=filtered(); if(!list.length){ toast('Tiada aduan untuk dimuat turun.'); return; }
-  const head=['No Aduan','Tarikh Diterima','Fasiliti/Unit','Lokasi','Kategori','Jenis Kerosakan','No Aset','Keterangan','Keutamaan','Dilaporkan Oleh','Status','Dirujuk Kepada','Tarikh Selesai','Hari Terbuka/Selesai'];
+  const head=['No Aduan','Tarikh Diterima','Tarikh Kerosakan','Fasiliti Pengadu','Lokasi','Perincian Lokasi','Kategori','Jenis Kerosakan','Kategori Aset','Jenis Aset','No Siri Pendaftaran Aset','Pengguna Terakhir','Perihal Kerosakan','Nama dan Jawatan Pengadu','Keutamaan','Status','Dirujuk Kepada','Tarikh Selesai','Hari Terbuka/Selesai',
+    'B2 Kos Terdahulu (RM)','B2 Anggaran Kos (RM)','B2 Syor dan Ulasan','B2 Nama dan Jawatan','B2 Tarikh','B3 Keputusan','B3 Ulasan','B3 Nama dan Jawatan','B3 Tarikh'];
   const lines=[head.map(csvCell).join(',')];
-  list.forEach(a=>lines.push([a.noAduan,fmtD(a.tarikh),a.fasiliti,a.lokasi,katName(a.kategoriKod),a.jenis,a.noAset,a.keterangan,a.keutamaan,a.pelapor,a.status,a.dirujukKepada,a.tarikhSelesai?fmtD(a.tarikhSelesai):'',a.status==='Dibatalkan'?'':umur(a)].map(csvCell).join(',')));
+  list.forEach(a=>{ const b2=a.b2||{}, b3=a.b3||{}; lines.push([a.noAduan,fmtD(a.tarikh),a.tarikhKerosakan?fmtD(a.tarikhKerosakan):'',a.fasiliti,a.lokasi,a.lokasiPerincian,katName(a.kategoriKod),a.jenis,a.kategoriAset,a.jenisAset,a.noAset,a.penggunaTerakhir,a.keterangan,a.pelapor,a.keutamaan,a.status,a.dirujukKepada,a.tarikhSelesai?fmtD(a.tarikhSelesai):'',a.status==='Dibatalkan'?'':umur(a),
+    b2.kosTerdahulu,b2.anggaranKos,b2.syor,b2.namaJawatan,b2.tarikh?fmtD(b2.tarikh):'',b3.keputusan,b3.ulasan,b3.namaJawatan,b3.tarikh?fmtD(b3.tarikh):''].map(csvCell).join(',')); });
   const url=URL.createObjectURL(new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}));
   const link=h('a',{href:url,download:`aduan-kerosakan-${todayStr()}.csv`}); document.body.append(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000);
 });
@@ -289,19 +320,37 @@ function fillSub(){
   coldCheck();
 }
 function coldCheck(){ const c=$('f-sub').value===COLD; $('cold-note').hidden=!c; if(c) $('p-krit').checked=true; }
-$('f-kat').addEventListener('change',fillSub); $('f-sub').addEventListener('change',coldCheck);
-function resetForm(){ $('form').reset(); $('f-tarikh').value=todayStr(); $('f-tarikh').max=todayStr(); fillSub(); fillFasiliti(); $('f-err').textContent=''; }
+$('f-kat').addEventListener('change',()=>{
+  fillSub();
+  const lalai=ASET_LALAI[$('f-kat').value];
+  document.querySelectorAll('input[name="ka"]').forEach(r=>{ r.checked = !!lalai && r.value===lalai; });
+  syncAset();
+});
+$('f-sub').addEventListener('change',coldCheck);
+function resetForm(){
+  $('form').reset(); $('f-tarikh').value=todayStr(); $('f-tarikh').max=todayStr();
+  $('f-tarikh-rosak').value=todayStr(); $('f-tarikh-rosak').max=todayStr();
+  fillSub(); fillFasiliti(); fillLokasi(); syncAset(); $('f-err').textContent='';
+}
 $('f-reset').addEventListener('click', resetForm);
 $('form').addEventListener('submit', async e=>{
   e.preventDefault();
   const err=$('f-err'); err.textContent='';
-  const d={ tarikh:$('f-tarikh').value, fasiliti:$('f-fasiliti').value, klinikDesa:$('f-kd').value, fasilitiLain:$('f-fas-lain').value.trim(), lokasi:$('f-lokasi').value.trim(), kategoriKod:$('f-kat').value, jenis:$('f-sub').value,
-    noAset:$('f-aset').value.trim(), pelapor:$('f-pelapor').value.trim(), keterangan:$('f-ket').value.trim(), keutamaan:(document.querySelector('input[name="prio"]:checked')||{}).value };
-  const miss=[];
-  if(!d.tarikh) miss.push('tarikh'); if(!d.fasiliti) miss.push('fasiliti'); if(d.fasiliti===KD_PILIHAN && !d.klinikDesa) miss.push('klinik desa'); if(d.fasiliti===LAIN_PILIHAN && !d.fasilitiLain) miss.push('nama fasiliti/unit'); if(!d.lokasi) miss.push('lokasi'); if(!d.kategoriKod) miss.push('kategori'); if(!d.jenis) miss.push('jenis kerosakan'); if(!d.keutamaan) miss.push('keutamaan');
+  const d={ tarikh:$('f-tarikh').value, tarikhKerosakan:$('f-tarikh-rosak').value, fasiliti:$('f-fasiliti').value, klinikDesa:$('f-kd').value, fasilitiLain:$('f-fas-lain').value.trim(),
+    lokasi:$('f-lokasi').value, lokasiPerincian:$('f-lokasi-detail').value.trim(), kategoriKod:$('f-kat').value, jenis:$('f-sub').value, kategoriAset:kaPilih(),
+    jenisAset:$('f-jenis-aset').value.trim(), noAset:$('f-aset').value.trim(), penggunaTerakhir:$('f-pengguna').value.trim(),
+    pelapor:$('f-pelapor').value.trim(), keterangan:$('f-ket').value.trim(), keutamaan:(document.querySelector('input[name="prio"]:checked')||{}).value };
+  const alih=d.kategoriAset===ASET_ALIH, miss=[];
+  if(!d.tarikh) miss.push('tarikh aduan diterima'); if(!d.tarikhKerosakan) miss.push('tarikh kerosakan');
+  if(!d.fasiliti) miss.push('fasiliti pengadu'); if(d.fasiliti===KD_PILIHAN && !d.klinikDesa) miss.push('klinik desa'); if(d.fasiliti===LAIN_PILIHAN && !d.fasilitiLain) miss.push('nama fasiliti/unit');
+  if(!d.lokasi) miss.push('lokasi kerosakan'); if(d.lokasi===LOKASI_LAIN && !d.lokasiPerincian) miss.push('perincian lokasi');
+  if(!d.kategoriKod) miss.push('kategori'); if(!d.jenis) miss.push('jenis kerosakan'); if(!d.kategoriAset) miss.push('kategori aset');
+  if(alih && !d.jenisAset) miss.push('jenis aset'); if(alih && !d.noAset) miss.push('no. siri pendaftaran aset');
+  if(!d.pelapor) miss.push('nama dan jawatan pengadu'); if(!d.keutamaan) miss.push('keutamaan');
   if (miss.length){ err.textContent='Lengkapkan: '+miss.join(', ')+'.'; return; }
   if (d.tarikh>todayStr()){ err.textContent='Tarikh aduan tidak boleh melebihi hari ini.'; return; }
-  const min=d.kategoriKod==='5'?40:15; if(d.keterangan.length<min){ err.textContent=`Keterangan terlalu ringkas (minimum ${min} aksara).`; $('f-ket').focus(); return; }
+  if (d.tarikhKerosakan>d.tarikh){ err.textContent='Tarikh kerosakan tidak boleh selepas tarikh aduan diterima.'; return; }
+  const min=d.kategoriKod==='5'?40:15; if(d.keterangan.length<min){ err.textContent=`Perihal kerosakan terlalu ringkas (minimum ${min} aksara).`; $('f-ket').focus(); return; }
   const btn=$('f-submit'); btn.disabled=true; btn.textContent='Menyimpan…';
   try{ const r=await api('daftar',{data:d}); resetForm(); toast(`Aduan ${r.noAduan} didaftarkan.`); await muat(); show('senarai'); bukaButiran(r.noAduan); }
   catch(ex){ if(ex.code!=='UNAUTHORIZED') err.textContent=ex.message; }
@@ -315,7 +364,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape' && openNo) closeDra
 
 async function bukaButiran(no, senyap){
   openNo=no; $('drawer').hidden=false; $('scrim').hidden=false; $('d-no').textContent=no;
-  if (!senyap){ $('d-info').replaceChildren(h('p',{class:'muted'},'Memuatkan butiran…')); $('d-log').replaceChildren(); $('d-upd').replaceChildren(); $('d-del').replaceChildren(); $('d-close').focus(); }
+  if (!senyap){ $('d-info').replaceChildren(h('p',{class:'muted'},'Memuatkan butiran…')); ['d-kewpa','d-log','d-upd','d-del'].forEach(id=>$(id).replaceChildren()); $('d-close').focus(); }
   try{
     const r=await api('butiran',{noAduan:no});
     if (openNo!==no) return;
@@ -328,15 +377,95 @@ function renderButiran(a, log){
   $('d-info').replaceChildren(
     h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px'}, h('span',{class:'pill '+stCls(a.status)},a.status), h('span',{class:'pr pr-'+a.keutamaan},a.keutamaan),
       a.status==='Dibatalkan'?null:h('span',{class:'pill',style:`background:var(--surface);color:${late?'var(--crit)':'var(--muted)'};border:1px solid var(--line)`}, a.status==='Selesai'?`Selesai dalam ${u} hari`:`${u} hari terbuka`)),
-    h('dl',{class:'kv'}, kv('Tarikh diterima',fmtD(a.tarikh)), kv('Fasiliti / unit',a.fasiliti), kv('Lokasi',a.lokasi), kv('Kategori',`${a.kategoriKod}. ${katName(a.kategoriKod)}`),
-      kv('Jenis kerosakan',a.jenis), kv('No. aset',a.noAset), kv('Dilaporkan oleh',a.pelapor), kv('Dirujuk kepada',a.dirujukKepada), a.tarikhSelesai?kv('Tarikh selesai',fmtD(a.tarikhSelesai)):null),
-    h('div',{style:'margin-top:12px'}, h('div',{class:'eyebrow',style:'margin-bottom:6px'},'Keterangan'), h('div',{class:'desc'},a.keterangan)));
+    h('dl',{class:'kv'}, kv('Tarikh diterima',fmtD(a.tarikh)), kv('Tarikh kerosakan',a.tarikhKerosakan?fmtD(a.tarikhKerosakan):''), kv('Fasiliti pengadu',a.fasiliti), kv('Lokasi kerosakan',lokasiPenuh(a)),
+      kv('Kategori',`${a.kategoriKod}. ${katName(a.kategoriKod)}`), kv('Jenis kerosakan',a.jenis), kv('Kategori aset',a.kategoriAset),
+      isAlih(a)?kv('Jenis aset',a.jenisAset):null, kv(isAlih(a)?'No. siri pendaftaran':'No. aset',a.noAset), isAlih(a)?kv('Pengguna terakhir',a.penggunaTerakhir):null,
+      kv('Nama dan jawatan pengadu',a.pelapor), kv('Dirujuk kepada',a.dirujukKepada), a.tarikhSelesai?kv('Tarikh selesai',fmtD(a.tarikhSelesai)):null),
+    h('div',{style:'margin-top:12px'}, h('div',{class:'eyebrow',style:'margin-bottom:6px'},'Perihal kerosakan'), h('div',{class:'desc'},a.keterangan)));
+  buildKewpa(a);
   $('d-log').replaceChildren(h('div',{class:'eyebrow',style:'margin-bottom:8px'},'Rekod tindakan'),
     h('ol',{class:'timeline'}, log.map(l=>h('li',null, h('div',null,h('b',null,l.status), l.dirujuk?` · dirujuk kepada ${l.dirujuk}`:''),
       l.catatan?h('div',{style:'white-space:pre-wrap;overflow-wrap:anywhere'},l.catatan):null,
       h('div',{class:'meta'},`Tarikh tindakan ${fmtD(l.tarikh)} · direkod ${fmtDT(l.masa)} oleh ${l.oleh||'—'}`)))));
   buildUpdate(a);
 }
+/* ---------- KEW.PA-10 Bahagian II & III ---------- */
+function buildKewpa(a){
+  const box=$('d-kewpa');
+  if (!isAlih(a)){ box.replaceChildren(a.kategoriAset===ASET_TAK_ALIH ? h('p',{class:'note'},'Aset tak alih: KEW.PA-10 tidak terpakai. Rekod tindakan melalui kemas kini status di bawah.') : null); return; }
+  const b2=a.b2||{}, b3=a.b3||{};
+  const cetak=h('button',{class:'btn small',type:'button'},'Cetak KEW.PA-10'); cetak.addEventListener('click',()=>cetakKewpa(a));
+  const status = b3.keputusan==='Diluluskan' ? h('div',{class:'kw-ok'},`Diluluskan oleh Ketua Jabatan pada ${fmtD(b3.tarikh)}.`)
+    : b3.keputusan==='Tidak Diluluskan' ? h('div',{class:'kw-warn'},`Tidak diluluskan oleh Ketua Jabatan pada ${fmtD(b3.tarikh)}.`)
+    : h('div',{class:'kw-warn'}, b2.namaJawatan ? 'Menunggu keputusan Ketua Jabatan (Bahagian III). Mengikut AM 2.4, penyelenggaraan dibuat selepas kelulusan.' : 'Bahagian II belum diisi oleh Pegawai Aset / Pegawai Teknikal.');
+  const head=h('div',{class:'kw-head'}, h('h3',null,'KEW.PA-10'), cetak);
+  if (!isAdmin()){
+    const kv=(k,v)=>[h('dt',null,k),h('dd',null,v||'—')];
+    box.replaceChildren(h('div',{class:'kw-box'}, head, status,
+      h('div',{class:'kw-sub'},'Bahagian II · Pegawai Aset / Pegawai Teknikal'),
+      h('dl',{class:'kv'}, kv('Kos penyelenggaraan terdahulu',rm(b2.kosTerdahulu)), kv('Anggaran kos penyelenggaraan',rm(b2.anggaranKos)), kv('Syor dan ulasan',b2.syor), kv('Nama dan jawatan',b2.namaJawatan), kv('Tarikh',b2.tarikh?fmtD(b2.tarikh):'')),
+      h('div',{class:'kw-sub'},'Bahagian III · Ketua Jabatan'),
+      h('dl',{class:'kv'}, kv('Keputusan',b3.keputusan), kv('Ulasan',b3.ulasan), kv('Nama dan jawatan',b3.namaJawatan), kv('Tarikh',b3.tarikh?fmtD(b3.tarikh):''))));
+    return;
+  }
+  const inp=(id,val,attrs)=>{ const el=h('input',Object.assign({id,type:'text'},attrs||{})); el.value=val||''; return el; };
+  const kos=inp('k-kos',b2.kosTerdahulu,{inputmode:'decimal',placeholder:'0.00'}), ang=inp('k-ang',b2.anggaranKos,{inputmode:'decimal',placeholder:'0.00'});
+  const syor=h('textarea',{id:'k-syor',rows:'2',maxlength:'800'}); syor.value=b2.syor||'';
+  const n2=inp('k-n2',b2.namaJawatan,{maxlength:'100',placeholder:'Nama dan jawatan Pegawai Aset / Teknikal'});
+  const t2=inp('k-t2',b2.tarikh||todayStr(),{type:'date',max:todayStr(),min:a.tarikh});
+  const kep=h('select',{id:'k-kep'}, opt('','Belum diputuskan'), opt('Diluluskan','Diluluskan',b3.keputusan==='Diluluskan'), opt('Tidak Diluluskan','Tidak Diluluskan',b3.keputusan==='Tidak Diluluskan'));
+  const ul=h('textarea',{id:'k-ul',rows:'2',maxlength:'500'}); ul.value=b3.ulasan||'';
+  const n3=inp('k-n3',b3.namaJawatan,{maxlength:'100',placeholder:'Nama dan jawatan Ketua Jabatan'});
+  const t3=inp('k-t3',b3.tarikh||todayStr(),{type:'date',max:todayStr(),min:a.tarikh});
+  const err=h('span',{class:'err',role:'alert'}), btn=h('button',{class:'btn primary',type:'button'},'Simpan KEW.PA-10');
+  btn.addEventListener('click', async ()=>{
+    err.textContent='';
+    const wang=v=>v.replace(/[,\sRMrm]/g,'');
+    const d={noAduan:a.noAduan, kosTerdahulu:wang(kos.value), anggaranKos:wang(ang.value), syor:syor.value.trim(), b2Nama:n2.value.trim(), b2Tarikh:t2.value,
+      keputusan:kep.value, ulasanKJ:ul.value.trim(), b3Nama:n3.value.trim(), b3Tarikh:kep.value?t3.value:''};
+    if ([d.kosTerdahulu,d.anggaranKos].some(v=>v!=='' && !(Number(v)>=0))){ err.textContent='Kos mesti nombor RM, contohnya 350.00'; return; }
+    if (!d.b2Nama){ err.textContent='Bahagian II: isi nama dan jawatan.'; return; }
+    if (d.keputusan && !d.b3Nama){ err.textContent='Bahagian III: isi nama dan jawatan Ketua Jabatan.'; return; }
+    btn.disabled=true; btn.textContent='Menyimpan…';
+    try{ await api('kewpa',{data:d}); toast('KEW.PA-10 disimpan.'); await muat(); bukaButiran(a.noAduan,true); }
+    catch(ex){ if(ex.code!=='UNAUTHORIZED') err.textContent=ex.message; btn.disabled=false; btn.textContent='Simpan KEW.PA-10'; }
+  });
+  box.replaceChildren(h('div',{class:'kw-box'}, head, status,
+    h('div',{class:'kw-sub'},'Bahagian II · Pegawai Aset / Pegawai Teknikal'),
+    h('div',{class:'two'}, h('label',{class:'f'},'8. Jumlah kos penyelenggaraan terdahulu (RM)',kos), h('label',{class:'f'},'9. Anggaran kos penyelenggaraan (RM)',ang)),
+    h('label',{class:'f'},'10. Syor dan ulasan',syor),
+    h('div',{class:'two'}, h('label',{class:'f'},'11. Nama dan jawatan',n2), h('label',{class:'f'},'12. Tarikh',t2)),
+    h('div',{class:'kw-sub'},'Bahagian III · Ketua Jabatan'),
+    h('div',{class:'two'}, h('label',{class:'f'},'Keputusan',kep), h('label',{class:'f'},'Tarikh',t3)),
+    h('label',{class:'f'},'Ulasan',ul), h('label',{class:'f'},'Nama dan jawatan',n3),
+    h('div',{class:'form-actions'},btn,err)));
+}
+function cetakKewpa(a){
+  const b2=a.b2||{}, b3=a.b3||{};
+  const row=(n,l,v)=>h('tr',null,h('td',{class:'n'},n),h('td',{class:'l'},l),h('td',{class:'c'},':'),h('td',{class:'v'},v||' '));
+  const lok=[a.fasiliti, lokasiPenuh(a)].filter(Boolean).join(', ');
+  $('print-kewpa').replaceChildren(
+    h('div',{class:'pk-code'},'KEW.PA-10'),
+    h('div',{class:'pk-title'},'BORANG ADUAN KEROSAKAN ASET ALIH'),
+    h('div',{class:'pk-sec'},'Bahagian I (Untuk diisi oleh Pengadu)'),
+    h('table',{class:'pk-tbl'}, h('tbody',null,
+      row('1.','Jenis Aset',a.jenisAset), row('2.','Nombor Siri Pendaftaran Aset/ Komponen',a.noAset), row('3.','Pengguna Terakhir',a.penggunaTerakhir),
+      row('4.','Tarikh Kerosakan',a.tarikhKerosakan?fmtD(a.tarikhKerosakan):''), row('5.','Perihal Kerosakan',a.keterangan + (lok?`\n(Lokasi: ${lok})`:'')),
+      row('6.','Nama Dan Jawatan',a.pelapor), row('7.','Tarikh',fmtD(a.tarikh)))),
+    h('div',{class:'pk-sign'},h('span',null,'Tandatangan Pengadu')),
+    h('div',{class:'pk-sec'},'Bahagian II (Untuk diisi oleh Pegawai Aset/ Pegawai Teknikal)'),
+    h('table',{class:'pk-tbl'}, h('tbody',null,
+      row('8.','Jumlah Kos Penyelenggaraan Terdahulu',rm(b2.kosTerdahulu)), row('9.','Anggaran Kos Penyelenggaraan',rm(b2.anggaranKos)),
+      row('10.','Syor Dan Ulasan',b2.syor), row('11.','Nama Dan Jawatan',b2.namaJawatan), row('12.','Tarikh',b2.tarikh?fmtD(b2.tarikh):''))),
+    h('div',{class:'pk-sign'},h('span',null,'Tandatangan Pegawai Aset/ Pegawai Teknikal')),
+    h('div',{class:'pk-sec'},'Bahagian III (Keputusan Ketua Jabatan)'),
+    h('table',{class:'pk-tbl'}, h('tbody',null,
+      row('','Keputusan',b3.keputusan||'Diluluskan / Tidak Diluluskan'), row('','Ulasan',b3.ulasan), row('','Nama Dan Jawatan',b3.namaJawatan), row('','Tarikh',b3.tarikh?fmtD(b3.tarikh):''))),
+    h('div',{class:'pk-sign'},h('span',null,'Tandatangan Ketua Jabatan')),
+    h('div',{class:'pk-foot'},`No. aduan sistem: ${a.noAduan} · Dicetak ${fmtDT(new Date().toISOString())}`));
+  window.print();
+}
+
 function buildUpdate(a){
   const box=$('d-upd'), del=$('d-del'); del.replaceChildren();
   if (!bolehTulis()){ box.replaceChildren(); return; }
@@ -426,7 +555,8 @@ $('u-form').addEventListener('submit', async e=>{
 
 /* ---------- Tetapan ---------- */
 function renderTetapan(){
-  if (['s-fas','s-kd','s-ruj','s-had'].includes(document.activeElement && document.activeElement.id)) return;
+  if (['s-fas','s-kd','s-lok','s-ruj','s-had'].includes(document.activeElement && document.activeElement.id)) return;
+  $('s-lok').value=(TET.lokasi||[]).join('\n');
   $('s-fas').value=(TET.fasiliti||[]).join('\n'); $('s-kd').value=(TET.klinikDesa||[]).map(k=>`${k.nama} | ${k.induk}`).join('\n'); $('s-ruj').value=(TET.rujukan||[]).join('\n'); $('s-had').value=had();
 }
 const lines = s => [...new Set(s.split('\n').map(x=>x.trim()).filter(Boolean))];
@@ -437,15 +567,17 @@ $('s-save').addEventListener('click', async ()=>{
   const salahKd=kd.find(k=>!k.nama || !fas.includes(k.induk));
   if (salahKd){ err.textContent=`Semak baris klinik desa "${salahKd.nama||'(kosong)'}": KK induk mesti sama dengan nama dalam senarai fasiliti.`; return; }
   if (!fas.length){ err.textContent='Senarai fasiliti tidak boleh kosong.'; return; }
+  const lok=lines($('s-lok').value);
+  if (!lok.length){ err.textContent='Senarai lokasi tidak boleh kosong.'; return; }
   if (!Number.isInteger(n)||n<1||n>365){ err.textContent='Had hari mesti nombor bulat antara 1 dan 365.'; return; }
   const b=$('s-save'); b.disabled=true;
-  try{ const r=await api('simpanTetapan',{data:{fasiliti:fas, klinikDesa:kd, rujukan:lines($('s-ruj').value), hadHari:n}}); TET=r.tetapan; renderAll(); toast('Tetapan disimpan.'); }
+  try{ const r=await api('simpanTetapan',{data:{fasiliti:fas, klinikDesa:kd, lokasi:lok, rujukan:lines($('s-ruj').value), hadHari:n}}); TET=r.tetapan; renderAll(); toast('Tetapan disimpan.'); }
   catch(ex){ if(ex.code!=='UNAUTHORIZED') err.textContent=ex.message; }
   finally{ b.disabled=false; }
 });
 
 /* ---------- Render ---------- */
-function renderAll(){ fillYears($('r-tahun'),false); fillYears($('l-tahun'),true); fillFasiliti(); renderRingkasan(); renderSenarai(); renderTetapan(); }
+function renderAll(){ fillYears($('r-tahun'),false); fillYears($('l-tahun'),true); fillFasiliti(); fillLokasi(); renderRingkasan(); renderSenarai(); renderTetapan(); }
 
 /* ---------- Mula ---------- */
 resetForm(); resetUForm();
