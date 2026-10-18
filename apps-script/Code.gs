@@ -42,7 +42,8 @@ const JENIS_COLD = 'Peti sejuk vaksin / cold chain';
 const STATUS = ['Baru', 'Dirujuk', 'Dalam Tindakan', 'Selesai', 'Dibatalkan'];
 const KEUTAMAAN = ['Kritikal', 'Tinggi', 'Biasa'];
 const PERANAN = ['admin', 'pentadbir', 'pemantau'];
-const LAIN_LAIN = 'Lain-lain';   // pilihan khas dalam senarai fasiliti; pengguna perlu nyatakan nama
+// Pilihan khas dalam senarai fasiliti: pengguna perlu nyatakan nama, direkod sebagai "<pilihan>: <nama>"
+const PERLU_NYATAKAN = ['Klinik Desa', 'Lain-lain'];
 
 /* =========================================================
  * PINTU MASUK WEB APP
@@ -382,9 +383,9 @@ function daftar_(s, d) {
   let fasiliti = teks_(d.fasiliti, 100, 'Fasiliti', true);
   if (s.peranan === 'pentadbir') {
     fasiliti = s.fasiliti;
-  } else if (fasiliti === LAIN_LAIN) {
-    if (tet.fasiliti.indexOf(LAIN_LAIN) === -1) throw appErr_('VALIDATION', 'Pilihan Lain-lain tidak diaktifkan dalam senarai fasiliti.');
-    fasiliti = LAIN_LAIN + ': ' + teks_(d.fasilitiLain, 80, 'Nama fasiliti / unit (Lain-lain)', true);
+  } else if (PERLU_NYATAKAN.indexOf(fasiliti) !== -1) {
+    if (tet.fasiliti.indexOf(fasiliti) === -1) throw appErr_('VALIDATION', 'Pilihan ' + fasiliti + ' tidak ada dalam senarai fasiliti.');
+    fasiliti = fasiliti + ': ' + teks_(d.fasilitiLain, 80, 'Nama ' + fasiliti, true);
   } else if (tet.fasiliti.indexOf(fasiliti) === -1) {
     throw appErr_('VALIDATION', 'Fasiliti tidak ada dalam senarai.');
   }
@@ -522,7 +523,7 @@ function simpanPengguna_(s, d) {
   if (PERANAN.indexOf(peranan) === -1) throw appErr_('VALIDATION', 'Peranan tidak sah.');
   let fasiliti = teks_(d.fasiliti, 100, 'Fasiliti', false);
   if (peranan === 'pentadbir') {
-    if (fasiliti === LAIN_LAIN || tetapan_().fasiliti.indexOf(fasiliti) === -1) throw appErr_('VALIDATION', 'Pilih fasiliti untuk pentadbir fasiliti.');
+    if (PERLU_NYATAKAN.indexOf(fasiliti) !== -1 || tetapan_().fasiliti.indexOf(fasiliti) === -1) throw appErr_('VALIDATION', 'Pilih fasiliti untuk pentadbir fasiliti.');
   } else fasiliti = '';
   const aktif = d.aktif !== false;
 
