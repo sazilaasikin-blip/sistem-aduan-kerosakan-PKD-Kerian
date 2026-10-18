@@ -80,7 +80,7 @@ Setup akan mencipta semua tab, menyembunyikan kolum `Salt` dan `Hash`, dan menja
 ### 7. Konfigurasi pertama dalam sistem
 
 1. Log masuk dengan emel admin dan kata laluan sementara. Tukar kata laluan apabila diminta.
-2. Tab **Tetapan**: masukkan senarai 11 klinik kesihatan dan unit PKD (satu setiap baris), senarai pihak rujukan tindakan, dan had hari lewat (lalai 14 hari). Simpan.
+2. Tab **Tetapan**: semak senarai klinik kesihatan dan unit PKD (satu setiap baris), senarai pihak rujukan tindakan, dan had hari lewat (lalai 14 hari). Simpan. Baris `Lain-lain` ialah pilihan khas: apabila dipilih dalam borang, pengguna perlu menyatakan nama fasiliti/unit, dan aduan direkod sebagai `Lain-lain: <nama>`. Buang baris itu jika tidak mahu pilihan ini.
 3. Tab **Pengguna**: tambah pengguna. Sistem memaparkan kata laluan sementara sekali sahaja untuk setiap pengguna baharu. Berikan secara terus kepada pengguna berkenaan.
 
 ---

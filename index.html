@@ -271,6 +271,7 @@ td.num,th.num{text-align:right}
       <form class="form" id="form" novalidate>
         <label class="f">Tarikh aduan diterima <span class="req">*</span><input type="date" id="f-tarikh"></label>
         <label class="f">Fasiliti / unit <span class="req">*</span><select id="f-fasiliti"></select><span class="hint" id="fas-hint" hidden></span></label>
+        <label class="f full" id="fas-lain-wrap" hidden>Nyatakan fasiliti / unit <span class="req">*</span><input type="text" id="f-fas-lain" maxlength="80" placeholder="Contoh: Klinik Desa Bagan Tiang"></label>
         <label class="f full">Lokasi kerosakan <span class="req">*</span><input type="text" id="f-lokasi" maxlength="120" placeholder="Contoh: Bilik Rawatan 2, tandas pesakit wanita, ruang menunggu KKIA"></label>
         <label class="f">Kategori <span class="req">*</span><select id="f-kat"></select></label>
         <label class="f" id="sub-wrap">Jenis kerosakan <span class="req">*</span><select id="f-sub"></select></label>
@@ -514,8 +515,12 @@ function fillFasiliti(){
   $('l-fas').replaceChildren(opt('','Semua fasiliti'), ...[...list,...extra].map(f=>opt(f,f))); $('l-fas').value=lk;
   $('l-fas').hidden = ME && ME.peranan==='pentadbir';
   const uk=$('u-fasiliti').value;
-  $('u-fasiliti').replaceChildren(opt('','Pilih fasiliti'), ...list.map(f=>opt(f,f))); $('u-fasiliti').value=uk;
+  $('u-fasiliti').replaceChildren(opt('','Pilih fasiliti'), ...list.filter(f=>f!==LAIN).map(f=>opt(f,f))); $('u-fasiliti').value=uk;
+  syncLain();
 }
+const LAIN='Lain-lain';
+function syncLain(){ const on=$('f-fasiliti').value===LAIN && !$('f-fasiliti').disabled; $('fas-lain-wrap').hidden=!on; if(!on) $('f-fas-lain').value=''; }
+$('f-fasiliti').addEventListener('change', syncLain);
 
 /* ---------- Ringkasan ---------- */
 const kpi = (cls,n,l,s) => h('div',{class:'kpi '+(cls||'')}, h('div',{class:'n'},n), h('div',{class:'l'},l), s?h('div',{class:'s'},s):null);
@@ -613,10 +618,10 @@ $('f-reset').addEventListener('click', resetForm);
 $('form').addEventListener('submit', async e=>{
   e.preventDefault();
   const err=$('f-err'); err.textContent='';
-  const d={ tarikh:$('f-tarikh').value, fasiliti:$('f-fasiliti').value, lokasi:$('f-lokasi').value.trim(), kategoriKod:$('f-kat').value, jenis:$('f-sub').value,
+  const d={ tarikh:$('f-tarikh').value, fasiliti:$('f-fasiliti').value, fasilitiLain:$('f-fas-lain').value.trim(), lokasi:$('f-lokasi').value.trim(), kategoriKod:$('f-kat').value, jenis:$('f-sub').value,
     noAset:$('f-aset').value.trim(), pelapor:$('f-pelapor').value.trim(), keterangan:$('f-ket').value.trim(), keutamaan:(document.querySelector('input[name="prio"]:checked')||{}).value };
   const miss=[];
-  if(!d.tarikh) miss.push('tarikh'); if(!d.fasiliti) miss.push('fasiliti'); if(!d.lokasi) miss.push('lokasi'); if(!d.kategoriKod) miss.push('kategori'); if(!d.jenis) miss.push('jenis kerosakan'); if(!d.keutamaan) miss.push('keutamaan');
+  if(!d.tarikh) miss.push('tarikh'); if(!d.fasiliti) miss.push('fasiliti'); if(d.fasiliti===LAIN && !d.fasilitiLain) miss.push('nama fasiliti/unit (Lain-lain)'); if(!d.lokasi) miss.push('lokasi'); if(!d.kategoriKod) miss.push('kategori'); if(!d.jenis) miss.push('jenis kerosakan'); if(!d.keutamaan) miss.push('keutamaan');
   if (miss.length){ err.textContent='Lengkapkan: '+miss.join(', ')+'.'; return; }
   if (d.tarikh>todayStr()){ err.textContent='Tarikh aduan tidak boleh melebihi hari ini.'; return; }
   const min=d.kategoriKod==='5'?40:15; if(d.keterangan.length<min){ err.textContent=`Keterangan terlalu ringkas (minimum ${min} aksara).`; $('f-ket').focus(); return; }
