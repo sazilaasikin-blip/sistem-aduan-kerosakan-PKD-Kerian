@@ -2,7 +2,7 @@
  * KONFIGURASI — tampal URL Web App Apps Script (berakhir dengan /exec)
  * URL ini bukan rahsia; semua data dilindungi oleh log masuk dan token sesi di server.
  * ========================================================= */
-const API_URL = 'TAMPAL_URL_WEB_APP_APPS_SCRIPT_DI_SINI';
+const API_URL = 'https://script.google.com/macros/s/AKfycbw3pcbELxQ4EvhIjz-GpzZkOCMYwSIMEr755pi9PmIgEu3GZYA1XbJzOTGjzlHsySs/exec';
 
 (() => {
 'use strict';
