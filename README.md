@@ -31,13 +31,20 @@ Dalam tab `Aduan`, lajur `B2_*` ialah Bahagian II dan `B3_*` ialah Bahagian III.
 
 ## Semakan status oleh pengadu
 
-Pengadu tidak perlu akaun. Setiap aduan mempunyai **kod semakan** rawak 6 aksara (lajur `KodSemakan`).
+Pengadu tidak perlu akaun.
 
-1. Selepas aduan didaftarkan, buka butiran aduan dan klik **Salin mesej untuk pengadu**. Mesej mengandungi No. aduan, kod semakan dan pautan terus. Hantar kepada pengadu melalui WhatsApp atau emel.
-2. Pengadu buka pautan itu, atau klik **Semak status aduan** di halaman log masuk dan masukkan No. aduan serta kod.
-3. Paparan pengadu hanya menunjukkan status, fasiliti, lokasi, jenis kerosakan, tarikh, keputusan KEW.PA-10 dan sejarah status. Nama pegawai, emel dan catatan dalaman tidak dipaparkan.
+1. Semasa mendaftar aduan, isi **Emel pengadu**. Sistem terus menghantar emel pengesahan yang mengandungi No. aduan, butiran ringkas dan butang **Semak status aduan**.
+2. Pengadu semak status dengan klik butang dalam emel, atau buka sistem, pilih **Semak status aduan** dan masukkan **No. aduan + emel mereka**.
+3. Pengadu yang tiada emel: dalam butiran aduan, klik **Salin mesej untuk pengadu** (mengandungi No. aduan, kod semakan 6 aksara dan pautan) dan hantar melalui WhatsApp. Kod semakan boleh digunakan di tempat emel.
+4. Jika pengadu tidak menerima emel, buka butiran aduan, betulkan alamat emel jika perlu dan klik **Hantar semula emel**.
 
-Had keselamatan: 10 cubaan salah bagi setiap No. aduan dalam 10 minit. Jika kod terdedah kepada orang yang tidak sepatutnya, klik **Jana kod baharu** dan kod lama terus tidak sah.
+Paparan pengadu hanya menunjukkan status, fasiliti, lokasi, jenis kerosakan, tarikh, keputusan KEW.PA-10 dan sejarah status. Nama pegawai, emel dan catatan dalaman tidak dipaparkan.
+
+Nota emel:
+- Emel dihantar melalui `MailApp` atas nama akaun yang membuat deployment Web App. Kali pertama selepas kemas kini kod, jalankan **Aduan Kerosakan > Setup awal sistem** supaya Google meminta kebenaran menghantar emel.
+- Had harian penghantaran emel bergantung pada jenis akaun Google. Jika had dicapai, aduan tetap disimpan dan emel boleh dihantar semula keesokan hari.
+
+Had keselamatan: 10 cubaan salah bagi setiap No. aduan dalam 10 minit. Jika kod semakan terdedah, klik **Jana kod baharu** dan kod lama terus tidak sah.
 
 ## Aliran status aduan
 

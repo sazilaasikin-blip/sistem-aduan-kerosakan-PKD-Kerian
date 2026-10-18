@@ -273,7 +273,7 @@ function filtered(){
     if (f && a.fasiliti!==f) return false;
     if (p && a.keutamaan!==p) return false;
     if (y && String(a.tarikh).slice(0,4)!==y) return false;
-    if (q && ![a.noAduan,a.lokasi,a.lokasiPerincian,a.noAset,a.jenisAset,a.keterangan,a.jenis,a.fasiliti,a.pelapor].join(' ').toLowerCase().includes(q)) return false;
+    if (q && ![a.noAduan,a.lokasi,a.lokasiPerincian,a.noAset,a.jenisAset,a.keterangan,a.jenis,a.fasiliti,a.pelapor,a.emelPengadu].join(' ').toLowerCase().includes(q)) return false;
     return true;
   });
   const s=$('l-sort').value;
@@ -302,10 +302,10 @@ function renderSenarai(){
 const csvCell = v => { let s=v==null?'':String(v); if(/^[=+\-@\t\r]/.test(s)) s="'"+s; return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
 $('btn-csv').addEventListener('click', ()=>{
   const list=filtered(); if(!list.length){ toast('Tiada aduan untuk dimuat turun.'); return; }
-  const head=['No Aduan','Tarikh Diterima','Tarikh Kerosakan','Fasiliti Pengadu','Lokasi','Perincian Lokasi','Kategori','Jenis Kerosakan','Kategori Aset','Jenis Aset','No Siri Pendaftaran Aset','Pengguna Terakhir','Perihal Kerosakan','Nama dan Jawatan Pengadu','Keutamaan','Status','Dirujuk Kepada','Tarikh Selesai','Hari Terbuka/Selesai',
+  const head=['No Aduan','Tarikh Diterima','Tarikh Kerosakan','Fasiliti Pengadu','Lokasi','Perincian Lokasi','Kategori','Jenis Kerosakan','Kategori Aset','Jenis Aset','No Siri Pendaftaran Aset','Pengguna Terakhir','Perihal Kerosakan','Nama dan Jawatan Pengadu','Emel Pengadu','Keutamaan','Status','Dirujuk Kepada','Tarikh Selesai','Hari Terbuka/Selesai',
     'B2 Kos Terdahulu (RM)','B2 Anggaran Kos (RM)','B2 Syor dan Ulasan','B2 Nama dan Jawatan','B2 Tarikh','B3 Keputusan','B3 Ulasan','B3 Nama dan Jawatan','B3 Tarikh'];
   const lines=[head.map(csvCell).join(',')];
-  list.forEach(a=>{ const b2=a.b2||{}, b3=a.b3||{}; lines.push([a.noAduan,fmtD(a.tarikh),a.tarikhKerosakan?fmtD(a.tarikhKerosakan):'',a.fasiliti,a.lokasi,a.lokasiPerincian,katName(a.kategoriKod),a.jenis,a.kategoriAset,a.jenisAset,a.noAset,a.penggunaTerakhir,a.keterangan,a.pelapor,a.keutamaan,a.status,a.dirujukKepada,a.tarikhSelesai?fmtD(a.tarikhSelesai):'',a.status==='Dibatalkan'?'':umur(a),
+  list.forEach(a=>{ const b2=a.b2||{}, b3=a.b3||{}; lines.push([a.noAduan,fmtD(a.tarikh),a.tarikhKerosakan?fmtD(a.tarikhKerosakan):'',a.fasiliti,a.lokasi,a.lokasiPerincian,katName(a.kategoriKod),a.jenis,a.kategoriAset,a.jenisAset,a.noAset,a.penggunaTerakhir,a.keterangan,a.pelapor,a.emelPengadu,a.keutamaan,a.status,a.dirujukKepada,a.tarikhSelesai?fmtD(a.tarikhSelesai):'',a.status==='Dibatalkan'?'':umur(a),
     b2.kosTerdahulu,b2.anggaranKos,b2.syor,b2.namaJawatan,b2.tarikh?fmtD(b2.tarikh):'',b3.keputusan,b3.ulasan,b3.namaJawatan,b3.tarikh?fmtD(b3.tarikh):''].map(csvCell).join(',')); });
   const url=URL.createObjectURL(new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}));
   const link=h('a',{href:url,download:`aduan-kerosakan-${todayStr()}.csv`}); document.body.append(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000);
@@ -339,7 +339,7 @@ $('form').addEventListener('submit', async e=>{
   const d={ tarikh:$('f-tarikh').value, tarikhKerosakan:$('f-tarikh-rosak').value, fasiliti:$('f-fasiliti').value, klinikDesa:$('f-kd').value, fasilitiLain:$('f-fas-lain').value.trim(),
     lokasi:$('f-lokasi').value, lokasiPerincian:$('f-lokasi-detail').value.trim(), kategoriKod:$('f-kat').value, jenis:$('f-sub').value, kategoriAset:kaPilih(),
     jenisAset:$('f-jenis-aset').value.trim(), noAset:$('f-aset').value.trim(), penggunaTerakhir:$('f-pengguna').value.trim(),
-    pelapor:$('f-pelapor').value.trim(), keterangan:$('f-ket').value.trim(), keutamaan:(document.querySelector('input[name="prio"]:checked')||{}).value };
+    pelapor:$('f-pelapor').value.trim(), emelPengadu:$('f-emel').value.trim(), pautanAsas:asasUrl(), keterangan:$('f-ket').value.trim(), keutamaan:(document.querySelector('input[name="prio"]:checked')||{}).value };
   const alih=d.kategoriAset===ASET_ALIH, miss=[];
   if(!d.tarikh) miss.push('tarikh aduan diterima'); if(!d.tarikhKerosakan) miss.push('tarikh kerosakan');
   if(!d.fasiliti) miss.push('fasiliti pengadu'); if(d.fasiliti===KD_PILIHAN && !d.klinikDesa) miss.push('klinik desa'); if(d.fasiliti===LAIN_PILIHAN && !d.fasilitiLain) miss.push('nama fasiliti/unit');
@@ -348,11 +348,18 @@ $('form').addEventListener('submit', async e=>{
   if(alih && !d.jenisAset) miss.push('jenis aset'); if(alih && !d.noAset) miss.push('no. siri pendaftaran aset');
   if(!d.pelapor) miss.push('nama dan jawatan pengadu'); if(!d.keutamaan) miss.push('keutamaan');
   if (miss.length){ err.textContent='Lengkapkan: '+miss.join(', ')+'.'; return; }
+  if (d.emelPengadu && !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(d.emelPengadu)){ err.textContent='Emel pengadu tidak sah.'; $('f-emel').focus(); return; }
   if (d.tarikh>todayStr()){ err.textContent='Tarikh aduan tidak boleh melebihi hari ini.'; return; }
   if (d.tarikhKerosakan>d.tarikh){ err.textContent='Tarikh kerosakan tidak boleh selepas tarikh aduan diterima.'; return; }
   const min=d.kategoriKod==='5'?40:15; if(d.keterangan.length<min){ err.textContent=`Perihal kerosakan terlalu ringkas (minimum ${min} aksara).`; $('f-ket').focus(); return; }
   const btn=$('f-submit'); btn.disabled=true; btn.textContent='Menyimpan…';
-  try{ const r=await api('daftar',{data:d}); resetForm(); toast(`Aduan ${r.noAduan} didaftarkan. Kod semakan pengadu: ${r.kodSemakan}`); await muat(); show('senarai'); bukaButiran(r.noAduan); }
+  try{
+    const r=await api('daftar',{data:d}); resetForm();
+    toast(r.emel==='dihantar' ? `Aduan ${r.noAduan} didaftarkan. Emel pengesahan dihantar kepada ${d.emelPengadu}.`
+      : r.emel==='gagal' ? `Aduan ${r.noAduan} didaftarkan, tetapi emel tidak dihantar: ${r.emelRalat}`
+      : `Aduan ${r.noAduan} didaftarkan.`);
+    await muat(); show('senarai'); bukaButiran(r.noAduan);
+  }
   catch(ex){ if(ex.code!=='UNAUTHORIZED') err.textContent=ex.message; }
   finally{ btn.disabled=false; btn.textContent='Daftar aduan'; }
 });
@@ -380,7 +387,7 @@ function renderButiran(a, log){
     h('dl',{class:'kv'}, kv('Tarikh diterima',fmtD(a.tarikh)), kv('Tarikh kerosakan',a.tarikhKerosakan?fmtD(a.tarikhKerosakan):''), kv('Fasiliti pengadu',a.fasiliti), kv('Lokasi kerosakan',lokasiPenuh(a)),
       kv('Kategori',`${a.kategoriKod}. ${katName(a.kategoriKod)}`), kv('Jenis kerosakan',a.jenis), kv('Kategori aset',a.kategoriAset),
       isAlih(a)?kv('Jenis aset',a.jenisAset):null, kv(isAlih(a)?'No. siri pendaftaran':'No. aset',a.noAset), isAlih(a)?kv('Pengguna terakhir',a.penggunaTerakhir):null,
-      kv('Nama dan jawatan pengadu',a.pelapor), kv('Dirujuk kepada',a.dirujukKepada), a.tarikhSelesai?kv('Tarikh selesai',fmtD(a.tarikhSelesai)):null),
+      kv('Nama dan jawatan pengadu',a.pelapor), kv('Emel pengadu',a.emelPengadu), kv('Dirujuk kepada',a.dirujukKepada), a.tarikhSelesai?kv('Tarikh selesai',fmtD(a.tarikhSelesai)):null),
     h('div',{style:'margin-top:12px'}, h('div',{class:'eyebrow',style:'margin-bottom:6px'},'Perihal kerosakan'), h('div',{class:'desc'},a.keterangan)),
     kotakPengadu(a));
   buildKewpa(a);
@@ -391,8 +398,29 @@ function renderButiran(a, log){
   buildUpdate(a);
 }
 /* ---------- Maklumat semakan untuk pengadu ---------- */
-const pautanSemak = a => `${location.origin}${location.pathname}?no=${encodeURIComponent(a.noAduan)}&kod=${encodeURIComponent(a.kodSemakan)}`;
+const asasUrl = () => `${location.origin}${location.pathname.replace(/index\.html$/,'')}`;
+const pautanSemak = a => `${asasUrl()}?no=${encodeURIComponent(a.noAduan)}&kod=${encodeURIComponent(a.kodSemakan)}`;
 const mesejPengadu = a => `Aduan kerosakan anda telah didaftarkan.\nNo. aduan: ${a.noAduan}\nKod semakan: ${a.kodSemakan}\nSemak status di: ${pautanSemak(a)}`;
+function kotakEmel(a){
+  const wrap=h('div',{style:'display:flex;flex-direction:column;gap:6px'});
+  const status = a.emelPengadu
+    ? (a.emelDihantar ? `Emel pengesahan dihantar kepada ${a.emelPengadu} pada ${fmtDT(a.emelDihantar)}.` : `Emel pengadu: ${a.emelPengadu}. Emel pengesahan belum berjaya dihantar.`)
+    : 'Tiada emel pengadu direkodkan.';
+  wrap.append(h('span',{style:'font-size:13.5px'},status));
+  if (!bolehTulis()) return wrap;
+  const inp=h('input',{type:'email',maxlength:'120',placeholder:'nama@moh.gov.my','aria-label':'Emel pengadu'}); inp.value=a.emelPengadu||'';
+  const btn=h('button',{class:'btn small',type:'button'}, a.emelDihantar?'Hantar semula emel':'Hantar emel');
+  const err=h('span',{class:'err',role:'alert'});
+  btn.addEventListener('click', async ()=>{
+    err.textContent=''; const e=inp.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(e)){ err.textContent='Masukkan emel yang sah.'; return; }
+    btn.disabled=true; btn.textContent='Menghantar…';
+    try{ await api('hantarEmel',{noAduan:a.noAduan, emel:e, pautanAsas:asasUrl()}); toast(`Emel dihantar kepada ${e}.`); await muat(); bukaButiran(a.noAduan,true); }
+    catch(ex){ btn.disabled=false; btn.textContent='Hantar emel'; if(ex.code!=='UNAUTHORIZED') err.textContent=ex.message; }
+  });
+  wrap.append(h('div',{class:'form-actions'}, h('div',{style:'flex:1 1 220px;min-width:0'},inp), btn), err);
+  return wrap;
+}
 function kotakPengadu(a){
   const box=h('div',{class:'pengadu-box',style:'margin-top:12px'});
   const jana=h('button',{class:'btn small',type:'button'}, a.kodSemakan?'Jana kod baharu':'Jana kod semakan');
@@ -402,15 +430,16 @@ function kotakPengadu(a){
     catch(ex){ jana.disabled=false; if(ex.code!=='UNAUTHORIZED') toast(ex.message); }
   });
   if (!a.kodSemakan){
-    box.append(h('div',{class:'eyebrow'},'Semakan oleh pengadu'), h('span',{class:'muted',style:'font-size:13.5px'},'Aduan ini belum ada kod semakan.'), bolehTulis()?h('div',null,jana):null);
+    box.append(h('div',{class:'eyebrow'},'Semakan oleh pengadu'), kotakEmel(a), h('span',{class:'muted',style:'font-size:13.5px'},'Aduan ini belum ada kod semakan.'), bolehTulis()?h('div',null,jana):null);
     return box;
   }
   const salin=h('button',{class:'btn small primary',type:'button'},'Salin mesej untuk pengadu');
   salin.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(mesejPengadu(a)); toast('Mesej disalin. Tampal dalam WhatsApp atau emel kepada pengadu.'); }catch(e){ toast('Tidak dapat menyalin. Salin No. aduan dan kod secara manual.'); } });
-  box.append(h('div',{class:'eyebrow'},'Semakan oleh pengadu'),
-    h('div',{style:'display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:14px'}, h('span',null,'Kod semakan: ', h('span',{class:'kod'},a.kodSemakan))),
-    h('span',{class:'muted',style:'font-size:13px'},'Berikan No. aduan dan kod ini kepada pengadu. Pengadu boleh semak status tanpa log masuk.'),
-    h('div',{class:'form-actions'}, salin, bolehTulis()?jana:null));
+  box.append(h('div',{class:'eyebrow'},'Semakan oleh pengadu'), kotakEmel(a),
+    h('div',{style:'border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:8px'},
+      h('span',{class:'muted',style:'font-size:13px'},'Untuk pengadu tanpa emel: berikan No. aduan dan kod semakan, atau salin mesej di bawah.'),
+      h('div',{style:'font-size:14px'}, 'Kod semakan: ', h('span',{class:'kod'},a.kodSemakan)),
+      h('div',{class:'form-actions'}, salin, bolehTulis()?jana:null)));
   return box;
 }
 
@@ -614,12 +643,14 @@ function showSemak(no, kod){
 async function semak(){
   const err=$('sk-err'), out=$('sk-hasil'); err.textContent='';
   const no=$('sk-no').value.trim().toUpperCase(), kod=$('sk-kod').value.trim().toUpperCase();
-  $('sk-no').value=no; $('sk-kod').value=kod;
+  $('sk-no').value=no; if (!$('sk-kod').value.includes('@')) $('sk-kod').value=kod;
   if (!/^KRN-\d{4}-\d{4,6}$/.test(no)){ err.textContent='Format No. aduan: KRN-2026-0001.'; out.replaceChildren(); return; }
-  if (!/^[A-Z0-9]{6}$/.test(kod)){ err.textContent='Kod semakan mesti 6 aksara.'; out.replaceChildren(); return; }
+  const emel=$('sk-kod').value.trim();
+  const gunaEmel=emel.includes('@');
+  if (gunaEmel ? !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(emel) : !/^[A-Z0-9]{6}$/.test(kod)){ err.textContent='Masukkan emel yang sah, atau kod semakan 6 aksara.'; out.replaceChildren(); return; }
   const btn=$('sk-btn'); btn.disabled=true; btn.textContent='Menyemak…';
   try{
-    const r=await api('semak',{noAduan:no, kod});
+    const r=await api('semak',{noAduan:no, kod: gunaEmel ? emel.toLowerCase() : kod});
     const a=r.aduan, kv=(k,v)=>[h('dt',null,k),h('dd',null,v||'—')];
     const ket = a.status==='Selesai' ? `Kerosakan telah selesai dibaiki pada ${fmtD(a.tarikhSelesai)}.`
       : a.status==='Dibatalkan' ? 'Aduan ini telah dibatalkan. Hubungi pentadbir fasiliti untuk maklumat lanjut.'

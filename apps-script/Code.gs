@@ -28,7 +28,7 @@ const HEAD = {
   // Susunan lajur mengikut KEW.PA-10: Bahagian I (pengadu), B2_ = Bahagian II (Pegawai Aset/Teknikal), B3_ = Bahagian III (Ketua Jabatan)
   Aduan: ['NoAduan', 'KodSemakan', 'TarikhDiterima', 'Status', 'Keutamaan', 'FasilitiPengadu', 'Lokasi', 'LokasiPerincian', 'KategoriKod', 'Kategori',
     'JenisKerosakan', 'KategoriAset', 'JenisAset', 'NoAset', 'PenggunaTerakhir', 'TarikhKerosakan', 'Keterangan', 'DilaporkanOleh',
-    'DirujukKepada', 'TarikhSelesai', 'B2_KosTerdahuluRM', 'B2_AnggaranKosRM', 'B2_SyorUlasan', 'B2_NamaJawatan', 'B2_Tarikh',
+    'EmelPengadu', 'EmelDihantar', 'DirujukKepada', 'TarikhSelesai', 'B2_KosTerdahuluRM', 'B2_AnggaranKosRM', 'B2_SyorUlasan', 'B2_NamaJawatan', 'B2_Tarikh',
     'B3_Keputusan', 'B3_Ulasan', 'B3_NamaJawatan', 'B3_Tarikh', 'DidaftarOleh', 'DidaftarPada', 'DikemaskiniOleh', 'DikemaskiniPada'],
   Log: ['NoAduan', 'Masa', 'TarikhTindakan', 'Status', 'DirujukKepada', 'Catatan', 'Oleh'],
   Pengguna: ['Email', 'Nama', 'Peranan', 'Fasiliti', 'Aktif', 'Salt', 'Hash', 'TukarKataLaluan', 'DiciptaPada', 'LogMasukTerakhir'],
@@ -124,6 +124,7 @@ function route_(b) {
     case 'kemaskini': perlu_(s, ['admin', 'pentadbir']); return kemaskini_(s, b.data || {});
     case 'kewpa': perlu_(s, ['admin']); return kewpa_(s, b.data || {});
     case 'janaKod': perlu_(s, ['admin', 'pentadbir']); return janaKod_(s, b);
+    case 'hantarEmel': perlu_(s, ['admin', 'pentadbir']); return hantarEmelSemula_(s, b);
     case 'padam': perlu_(s, ['admin']); return padam_(s, b);
     case 'simpanTetapan': perlu_(s, ['admin']); return simpanTetapan_(s, b.data || {});
     case 'senaraiPengguna': perlu_(s, ['admin']); return { pengguna: senaraiPengguna_() };
@@ -406,6 +407,7 @@ function aduanAwam_(r) {
     kategoriKod: String(r.KategoriKod), kategori: r.Kategori, jenis: r.JenisKerosakan,
     kategoriAset: r.KategoriAset, jenisAset: r.JenisAset, noAset: r.NoAset, penggunaTerakhir: r.PenggunaTerakhir,
     tarikhKerosakan: r.TarikhKerosakan, keterangan: r.Keterangan, keutamaan: r.Keutamaan, pelapor: r.DilaporkanOleh,
+    emelPengadu: r.EmelPengadu, emelDihantar: r.EmelDihantar,
     status: r.Status, dirujukKepada: r.DirujukKepada, tarikhSelesai: r.TarikhSelesai,
     b2: { kosTerdahulu: r.B2_KosTerdahuluRM, anggaranKos: r.B2_AnggaranKosRM, syor: r.B2_SyorUlasan, namaJawatan: r.B2_NamaJawatan, tarikh: r.B2_Tarikh },
     b3: { keputusan: r.B3_Keputusan, ulasan: r.B3_Ulasan, namaJawatan: r.B3_NamaJawatan, tarikh: r.B3_Tarikh },
@@ -493,6 +495,7 @@ function daftar_(s, d) {
   const noAset = alih ? teks_(d.noAset, 60, 'No. siri pendaftaran aset', true) : teks_(d.noAset, 60, 'No. aset', false);
   const penggunaTerakhir = alih ? teks_(d.penggunaTerakhir, 80, 'Pengguna terakhir', false) : '';
   const pelapor = teks_(d.pelapor, 100, 'Nama dan jawatan pengadu', true);
+  const emelPengadu = emel_(d.emelPengadu);
 
   return withLock_(function () {
     const tahun = tarikh.slice(0, 4);
@@ -506,13 +509,102 @@ function daftar_(s, d) {
       NoAduan: no, KodSemakan: kod, TarikhDiterima: tarikh, Status: 'Baru', Keutamaan: keutamaan, FasilitiPengadu: fasiliti,
       Lokasi: lokasi, LokasiPerincian: lokasiPerincian, KategoriKod: kod, Kategori: kat.nama, JenisKerosakan: jenis,
       KategoriAset: kategoriAset, JenisAset: jenisAset, NoAset: noAset, PenggunaTerakhir: penggunaTerakhir,
-      TarikhKerosakan: tarikhKerosakan, Keterangan: keterangan, DilaporkanOleh: pelapor, DirujukKepada: '', TarikhSelesai: '',
+      TarikhKerosakan: tarikhKerosakan, Keterangan: keterangan, DilaporkanOleh: pelapor, EmelPengadu: emelPengadu, EmelDihantar: '',
+      DirujukKepada: '', TarikhSelesai: '',
       DidaftarOleh: s.email, DidaftarPada: masa, DikemaskiniOleh: s.email, DikemaskiniPada: masa
     };
     tambahBaris_(SH.ADUAN, rec);
     tambahBaris_(SH.LOG, { NoAduan: no, Masa: masa, TarikhTindakan: tarikh, Status: 'Baru', DirujukKepada: '', Catatan: 'Aduan didaftarkan' + (alih ? ' (aset alih, KEW.PA-10)' : ''), Oleh: s.email });
     audit_(s.email, 'DAFTAR_ADUAN', no);
-    return { noAduan: no, kodSemakan: kod };
+    const hasil = { noAduan: no, kodSemakan: kod, emel: 'tiada' };
+    if (emelPengadu) {
+      const e = hantarEmel_(rec, d.pautanAsas);
+      hasil.emel = e.ok ? 'dihantar' : 'gagal';
+      if (!e.ok) hasil.emelRalat = e.ralat;
+      else catatEmelDihantar_(no);
+    }
+    return hasil;
+  });
+}
+
+/* ---------- Emel kepada pengadu ---------- */
+function emel_(v) {
+  const e = String(v == null ? '' : v).trim().toLowerCase();
+  if (!e) return '';
+  if (e.length > 120 || !/^[^\s@<>"',;]+@[^\s@<>"',;]+\.[a-z]{2,}$/.test(e)) throw appErr_('VALIDATION', 'Emel pengadu tidak sah.');
+  return e;
+}
+
+/** Pautan sistem untuk emel: hanya halaman GitHub Pages (elak pautan ke laman lain) */
+function pautanSah_(p) {
+  const u = String(p || '').trim();
+  return /^https:\/\/[a-z0-9-]+\.github\.io(\/[A-Za-z0-9._-]+)?\/?$/.test(u) ? u.replace(/\/?$/, '/') : '';
+}
+
+function fmtTarikh_(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; }
+function escHtml_(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+/** Hantar emel pengesahan aduan. Tidak membatalkan pendaftaran jika gagal. */
+function hantarEmel_(a, pautanAsas) {
+  try {
+    const asas = pautanSah_(pautanAsas);
+    const pautan = asas ? asas + '?no=' + encodeURIComponent(a.NoAduan) + '&kod=' + encodeURIComponent(a.KodSemakan) : '';
+    const baris = [
+      ['No. aduan', a.NoAduan], ['Tarikh diterima', fmtTarikh_(a.TarikhDiterima)], ['Fasiliti', a.FasilitiPengadu],
+      ['Lokasi', [a.Lokasi, a.LokasiPerincian].filter(String).join(' · ')],
+      ['Kerosakan', a.JenisAset || a.JenisKerosakan], ['Status semasa', a.Status || 'Baru']
+    ];
+    const teks = ['Salam sejahtera,', '',
+      'Aduan kerosakan anda telah direkodkan dalam Sistem Aduan Kerosakan Aset & Fasiliti PKD Kerian.', '']
+      .concat(baris.map(function (b) { return b[0] + ': ' + b[1]; }))
+      .concat(['', pautan ? 'Semak status aduan: ' + pautan : '',
+        asas ? 'Atau buka ' + asas + ', pilih "Semak status aduan" dan masukkan No. aduan berserta emel ini.' : 'Untuk menyemak status, hubungi pentadbir fasiliti anda dengan menyatakan No. aduan di atas.',
+        '', 'Emel ini dijana secara automatik. Untuk pertanyaan, hubungi pentadbir fasiliti anda.'])
+      .join('\n');
+    const html = '<div style="font-family:Arial,sans-serif;font-size:14px;color:#16262a;line-height:1.5">' +
+      '<p>Salam sejahtera,</p><p>Aduan kerosakan anda telah direkodkan dalam <b>Sistem Aduan Kerosakan Aset &amp; Fasiliti PKD Kerian</b>.</p>' +
+      '<table style="border-collapse:collapse;margin:8px 0 14px">' +
+      baris.map(function (b) { return '<tr><td style="padding:4px 14px 4px 0;color:#56686c">' + escHtml_(b[0]) + '</td><td style="padding:4px 0"><b>' + escHtml_(b[1]) + '</b></td></tr>'; }).join('') +
+      '</table>' +
+      (pautan ? '<p><a href="' + escHtml_(pautan) + '" style="display:inline-block;background:#0d6a62;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;font-weight:bold">Semak status aduan</a></p>' +
+        '<p style="font-size:13px;color:#56686c">Atau buka ' + escHtml_(asas) + ', pilih "Semak status aduan" dan masukkan No. aduan berserta emel ini.</p>'
+        : '<p>Untuk menyemak status, hubungi pentadbir fasiliti anda dengan menyatakan No. aduan di atas.</p>') +
+      '<p style="font-size:12px;color:#56686c">Emel ini dijana secara automatik. Untuk pertanyaan, hubungi pentadbir fasiliti anda.</p></div>';
+    MailApp.sendEmail({ to: a.EmelPengadu, subject: 'Aduan kerosakan direkodkan: ' + a.NoAduan, body: teks, htmlBody: html, name: 'Sistem Aduan Kerosakan PKD Kerian' });
+    return { ok: true };
+  } catch (e) {
+    console.error('Emel gagal: ' + e);
+    const kuota = /limit|quota|too many/i.test(String(e));
+    return { ok: false, ralat: kuota ? 'Had harian penghantaran emel telah dicapai. Cuba hantar semula esok.' : 'Emel tidak dapat dihantar. Semak alamat emel dan cuba hantar semula.' };
+  }
+}
+
+function catatEmelDihantar_(no) {
+  const r = cariAduan_(no);
+  const i = r.t.head.indexOf('EmelDihantar');
+  if (r.a && i !== -1) r.t.sh.getRange(r.a._row, i + 1).setValue(nowIso_());
+}
+
+/** Hantar semula emel (boleh tukar alamat emel pengadu sekali) */
+function hantarEmelSemula_(s, b) {
+  const emelBaru = emel_(b.emel);
+  if (!emelBaru) throw appErr_('VALIDATION', 'Masukkan emel pengadu.');
+  return withLock_(function () {
+    const r = cariAduan_(b.noAduan);
+    if (!r.a || !dalamSkop_(s, r.a.FasilitiPengadu)) throw appErr_('NOT_FOUND', 'Aduan tidak dijumpai.');
+    const iE = r.t.head.indexOf('EmelPengadu');
+    if (iE === -1) throw appErr_('NOT_SETUP', 'Lajur EmelPengadu tiada dalam sheet Aduan. Jalankan Setup awal sistem sekali lagi.');
+    if (emelBaru !== r.a.EmelPengadu) r.t.sh.getRange(r.a._row, iE + 1).setValue(safe_(emelBaru));
+    const rec = Object.assign({}, r.a, { EmelPengadu: emelBaru });
+    if (!rec.KodSemakan) {
+      rec.KodSemakan = kodSemakanBaru_();
+      r.t.sh.getRange(r.a._row, r.t.head.indexOf('KodSemakan') + 1).setValue(rec.KodSemakan);
+    }
+    const e = hantarEmel_(rec, b.pautanAsas);
+    if (!e.ok) throw appErr_('EMEL_GAGAL', e.ralat);
+    catatEmelDihantar_(r.a.NoAduan);
+    audit_(s.email, 'HANTAR_EMEL_PENGADU', r.a.NoAduan);
+    return { emel: emelBaru };
   });
 }
 
@@ -611,9 +703,11 @@ function janaKod_(s, b) {
 /** Semakan status oleh pengadu tanpa log masuk. Hanya maklumat asas dipulangkan: tiada nama, emel atau catatan dalaman. */
 function semak_(b) {
   const no = String(b.noAduan || '').trim().toUpperCase();
-  const kod = String(b.kod || '').trim().toUpperCase();
-  const gagal = function () { return appErr_('SEMAK_GAGAL', 'No. aduan atau kod semakan tidak sepadan. Semak semula dengan pentadbir fasiliti anda.'); };
-  if (!/^KRN-\d{4}-\d{4,6}$/.test(no) || !/^[A-Z2-9]{6}$/.test(kod)) throw gagal();
+  const pengesah = String(b.kod || '').trim();
+  const gunaEmel = pengesah.indexOf('@') !== -1;
+  const kod = gunaEmel ? pengesah.toLowerCase() : pengesah.toUpperCase();
+  const gagal = function () { return appErr_('SEMAK_GAGAL', 'No. aduan dan ' + (gunaEmel ? 'emel' : 'kod semakan') + ' tidak sepadan. Semak semula emel pengesahan aduan anda atau hubungi pentadbir fasiliti.'); };
+  if (!/^KRN-\d{4}-\d{4,6}$/.test(no) || (gunaEmel ? kod.length > 120 : !/^[A-Z2-9]{6}$/.test(kod))) throw gagal();
 
   const cache = CacheService.getScriptCache();
   const kGlobal = 'semak_global', kNo = 'semak_' + no;
@@ -622,7 +716,8 @@ function semak_(b) {
   cache.put(kGlobal, String(nGlobal + 1), SEMAK_TEMPOH_SAAT);
 
   const a = table_(SH.ADUAN).rows.find(function (r) { return r.NoAduan === no; });
-  if (!a || !a.KodSemakan || !samaRata_(String(a.KodSemakan).toUpperCase(), kod)) {
+  const rujukan = a ? String(gunaEmel ? a.EmelPengadu : a.KodSemakan || '') : '';
+  if (!a || !rujukan || !samaRata_(gunaEmel ? rujukan.toLowerCase() : rujukan.toUpperCase(), kod)) {
     cache.put(kNo, String(nNo + 1), SEMAK_TEMPOH_SAAT);
     throw gagal();
   }

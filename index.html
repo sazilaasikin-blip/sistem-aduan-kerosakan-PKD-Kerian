@@ -228,7 +228,7 @@ td.num,th.num{text-align:right}
     <label class="f">Kata laluan<input type="password" id="lg-pw" autocomplete="current-password" required></label>
     <div class="form-actions"><button class="btn primary" type="submit" id="lg-btn">Log masuk</button><span class="err" id="lg-err" role="alert"></span></div>
     <div class="semak-link"><span class="muted">Pengadu yang ingin menyemak status aduan:</span> <button class="btn" type="button" id="btn-ke-semak">Semak status aduan</button></div>
-    <p class="notice">Sistem dalaman untuk merekod dan memantau aduan kerosakan aset, bangunan dan fasiliti di klinik dan unit PKD Kerian. Data yang disimpan: nama dan emel pengguna, nama pegawai yang melaporkan, dan maklumat kerosakan. Data hanya digunakan untuk pengurusan pembaikan dan pelaporan dalaman, dan hanya boleh diakses oleh pengguna berdaftar mengikut peranan. Lupa kata laluan: hubungi pentadbir sistem.</p>
+    <p class="notice">Sistem dalaman untuk merekod dan memantau aduan kerosakan aset, bangunan dan fasiliti di klinik dan unit PKD Kerian. Data yang disimpan: nama dan emel pengguna, nama, jawatan dan emel pegawai yang melaporkan, dan maklumat kerosakan. Data hanya digunakan untuk pengurusan pembaikan dan pelaporan dalaman, dan hanya boleh diakses oleh pengguna berdaftar mengikut peranan. Lupa kata laluan: hubungi pentadbir sistem.</p>
   </form>
 </section>
 
@@ -236,10 +236,10 @@ td.num,th.num{text-align:right}
 <section id="screen-semak" class="auth" hidden>
   <div class="auth-card semak-card">
     <div><div class="eyebrow">Pejabat Kesihatan Daerah Kerian</div><h1>Semak status aduan kerosakan</h1></div>
-    <p class="muted" style="margin:0">Masukkan No. aduan dan kod semakan yang diberi oleh pentadbir fasiliti semasa aduan didaftarkan.</p>
+    <p class="muted" style="margin:0">Masukkan No. aduan dan emel anda yang didaftarkan bersama aduan. Kedua-duanya ada dalam emel pengesahan aduan.</p>
     <form id="sk-form" class="two" novalidate>
       <label class="f"><span>No. aduan <span class="req">*</span></span><input type="text" id="sk-no" maxlength="16" placeholder="KRN-2026-0001" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
-      <label class="f"><span>Kod semakan <span class="req">*</span></span><input type="text" id="sk-kod" maxlength="6" placeholder="6 aksara" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <label class="f"><span>Emel anda <span class="req">*</span></span><input type="text" id="sk-kod" maxlength="120" placeholder="nama@moh.gov.my" autocomplete="email" autocapitalize="off" spellcheck="false"><span class="hint">Atau kod semakan 6 aksara jika diberi oleh pentadbir.</span></label>
       <div class="form-actions" style="grid-column:1/-1"><button class="btn primary" type="submit" id="sk-btn">Semak status</button><span class="err" id="sk-err" role="alert"></span></div>
     </form>
     <div id="sk-hasil" aria-live="polite"></div>
@@ -359,7 +359,8 @@ td.num,th.num{text-align:right}
           <label class="f"><span>2. No. siri pendaftaran aset/komponen <span class="req">*</span></span><input type="text" id="f-aset" maxlength="60" placeholder="Contoh: KKM/PKDK/H/24/001"></label>
           <label class="f">3. Pengguna terakhir<input type="text" id="f-pengguna" maxlength="80" placeholder="Nama pegawai yang terakhir menggunakan"></label>
         </fieldset>
-        <label class="f full"><span>Nama dan jawatan pengadu <span class="req">*</span></span><input type="text" id="f-pelapor" maxlength="100" placeholder="Contoh: Siti Aminah, Jururawat U29"></label>
+        <label class="f"><span>Nama dan jawatan pengadu <span class="req">*</span></span><input type="text" id="f-pelapor" maxlength="100" placeholder="Contoh: Siti Aminah, Jururawat U29"></label>
+        <label class="f">Emel pengadu<input type="email" id="f-emel" maxlength="120" placeholder="nama@moh.gov.my" autocomplete="off"><span class="hint">Pengadu akan menerima emel berserta No. aduan dan pautan semakan status.</span></label>
         <label class="f full"><span>Perihal kerosakan <span class="req">*</span></span><textarea id="f-ket" rows="4" maxlength="1500" placeholder="Apa yang rosak, sejak bila, kesan kepada perkhidmatan"></textarea><span class="hint" id="ket-hint">Minimum 15 aksara.</span></label>
         <div class="full" role="radiogroup" aria-labelledby="prio-lbl" style="display:flex;flex-direction:column;gap:6px">
           <span id="prio-lbl" style="font-weight:600;font-size:14px">Tahap keutamaan <span class="req">*</span></span>
