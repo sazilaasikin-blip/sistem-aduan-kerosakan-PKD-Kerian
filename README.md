@@ -29,6 +29,16 @@ Setiap aduan ditanda **Aset Alih** atau **Aset Tak Alih** (dipilih automatik iku
 
 Dalam tab `Aduan`, lajur `B2_*` ialah Bahagian II dan `B3_*` ialah Bahagian III. Lokasi kerosakan dipilih daripada tab `Lokasi` (boleh diedit di tab Tetapan); pilihan `Lain-lain` memerlukan perincian lokasi.
 
+## Semakan status oleh pengadu
+
+Pengadu tidak perlu akaun. Setiap aduan mempunyai **kod semakan** rawak 6 aksara (lajur `KodSemakan`).
+
+1. Selepas aduan didaftarkan, buka butiran aduan dan klik **Salin mesej untuk pengadu**. Mesej mengandungi No. aduan, kod semakan dan pautan terus. Hantar kepada pengadu melalui WhatsApp atau emel.
+2. Pengadu buka pautan itu, atau klik **Semak status aduan** di halaman log masuk dan masukkan No. aduan serta kod.
+3. Paparan pengadu hanya menunjukkan status, fasiliti, lokasi, jenis kerosakan, tarikh, keputusan KEW.PA-10 dan sejarah status. Nama pegawai, emel dan catatan dalaman tidak dipaparkan.
+
+Had keselamatan: 10 cubaan salah bagi setiap No. aduan dalam 10 minit. Jika kod terdedah kepada orang yang tidak sepatutnya, klik **Jana kod baharu** dan kod lama terus tidak sah.
+
 ## Aliran status aduan
 
 `Baru` → `Dirujuk` → `Dalam Tindakan` → `Selesai`  (atau `Dibatalkan`)

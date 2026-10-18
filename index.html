@@ -167,6 +167,15 @@ td.num,th.num{text-align:right}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:6px;font-size:14px;z-index:60;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
 .loading{opacity:.6;pointer-events:none}
 
+/* Semak status (pengadu) */
+.semak-link{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13.5px;border-top:1px solid var(--line);padding-top:14px}
+.semak-card{width:min(560px,100%)}
+.sk-res{display:flex;flex-direction:column;gap:12px;border:1px solid var(--line);border-radius:8px;padding:14px;background:var(--surface-2)}
+.sk-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.linkbtn{appearance:none;border:0;background:none;padding:0;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline}
+.kod{font-family:var(--f-mono);font-weight:500;letter-spacing:.12em;background:var(--tag);color:var(--on-tag);padding:2px 8px;border-radius:3px}
+.pengadu-box{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px dashed var(--accent);border-radius:8px;padding:12px 14px}
+
 /* KEW.PA-10 */
 .kewpa{grid-column:1/-1;border:1px solid var(--line);border-radius:8px;padding:12px 14px 14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;margin:0;min-width:0}
 .kewpa legend{font-weight:600;font-size:13px;padding:0 6px;color:var(--accent)}
@@ -218,8 +227,24 @@ td.num,th.num{text-align:right}
     <label class="f">Emel rasmi<input type="email" id="lg-email" autocomplete="username" required></label>
     <label class="f">Kata laluan<input type="password" id="lg-pw" autocomplete="current-password" required></label>
     <div class="form-actions"><button class="btn primary" type="submit" id="lg-btn">Log masuk</button><span class="err" id="lg-err" role="alert"></span></div>
+    <div class="semak-link"><span class="muted">Pengadu yang ingin menyemak status aduan:</span> <button class="btn" type="button" id="btn-ke-semak">Semak status aduan</button></div>
     <p class="notice">Sistem dalaman untuk merekod dan memantau aduan kerosakan aset, bangunan dan fasiliti di klinik dan unit PKD Kerian. Data yang disimpan: nama dan emel pengguna, nama pegawai yang melaporkan, dan maklumat kerosakan. Data hanya digunakan untuk pengurusan pembaikan dan pelaporan dalaman, dan hanya boleh diakses oleh pengguna berdaftar mengikut peranan. Lupa kata laluan: hubungi pentadbir sistem.</p>
   </form>
+</section>
+
+<!-- ============ SEMAK STATUS (PENGADU, TANPA LOG MASUK) ============ -->
+<section id="screen-semak" class="auth" hidden>
+  <div class="auth-card semak-card">
+    <div><div class="eyebrow">Pejabat Kesihatan Daerah Kerian</div><h1>Semak status aduan kerosakan</h1></div>
+    <p class="muted" style="margin:0">Masukkan No. aduan dan kod semakan yang diberi oleh pentadbir fasiliti semasa aduan didaftarkan.</p>
+    <form id="sk-form" class="two" novalidate>
+      <label class="f"><span>No. aduan <span class="req">*</span></span><input type="text" id="sk-no" maxlength="16" placeholder="KRN-2026-0001" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <label class="f"><span>Kod semakan <span class="req">*</span></span><input type="text" id="sk-kod" maxlength="6" placeholder="6 aksara" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <div class="form-actions" style="grid-column:1/-1"><button class="btn primary" type="submit" id="sk-btn">Semak status</button><span class="err" id="sk-err" role="alert"></span></div>
+    </form>
+    <div id="sk-hasil" aria-live="polite"></div>
+    <p class="notice"><button class="linkbtn" type="button" id="btn-ke-login">Log masuk pentadbir</button> · Paparan ini tidak menunjukkan nama pegawai atau catatan dalaman.</p>
+  </div>
 </section>
 
 <!-- ============ TUKAR KATA LALUAN ============ -->

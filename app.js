@@ -84,7 +84,7 @@ const isAdmin = () => ME && ME.peranan==='admin';
 const bolehTulis = () => ME && (ME.peranan==='admin' || ME.peranan==='pentadbir');
 
 /* ---------- Skrin ---------- */
-function screen(id){ ['screen-login','screen-tukar','screen-app'].forEach(s=>$(s).hidden = s!==id); }
+function screen(id){ ['screen-login','screen-tukar','screen-app','screen-semak'].forEach(s=>$(s).hidden = s!==id); }
 function showLogin(msg){ closeDrawer(); screen('screen-login'); $('cfg-warn').hidden = configured(); $('lg-err').textContent = msg||''; $('lg-pw').value=''; setTimeout(()=>$('lg-email').focus(),0); }
 function showTukar(wajib){ screen('screen-tukar'); $('pw-intro').textContent = wajib ? 'Anda menggunakan kata laluan sementara. Tetapkan kata laluan baharu sebelum meneruskan.' : 'Tukar kata laluan akaun anda.'; $('pw-batal').textContent = wajib ? 'Log keluar' : 'Batal'; $('pw-batal').dataset.wajib = wajib?'1':''; ['pw-lama','pw-baru','pw-ulang'].forEach(i=>$(i).value=''); $('pw-err').textContent=''; setTimeout(()=>$('pw-lama').focus(),0); }
 
@@ -352,7 +352,7 @@ $('form').addEventListener('submit', async e=>{
   if (d.tarikhKerosakan>d.tarikh){ err.textContent='Tarikh kerosakan tidak boleh selepas tarikh aduan diterima.'; return; }
   const min=d.kategoriKod==='5'?40:15; if(d.keterangan.length<min){ err.textContent=`Perihal kerosakan terlalu ringkas (minimum ${min} aksara).`; $('f-ket').focus(); return; }
   const btn=$('f-submit'); btn.disabled=true; btn.textContent='Menyimpan…';
-  try{ const r=await api('daftar',{data:d}); resetForm(); toast(`Aduan ${r.noAduan} didaftarkan.`); await muat(); show('senarai'); bukaButiran(r.noAduan); }
+  try{ const r=await api('daftar',{data:d}); resetForm(); toast(`Aduan ${r.noAduan} didaftarkan. Kod semakan pengadu: ${r.kodSemakan}`); await muat(); show('senarai'); bukaButiran(r.noAduan); }
   catch(ex){ if(ex.code!=='UNAUTHORIZED') err.textContent=ex.message; }
   finally{ btn.disabled=false; btn.textContent='Daftar aduan'; }
 });
@@ -381,7 +381,8 @@ function renderButiran(a, log){
       kv('Kategori',`${a.kategoriKod}. ${katName(a.kategoriKod)}`), kv('Jenis kerosakan',a.jenis), kv('Kategori aset',a.kategoriAset),
       isAlih(a)?kv('Jenis aset',a.jenisAset):null, kv(isAlih(a)?'No. siri pendaftaran':'No. aset',a.noAset), isAlih(a)?kv('Pengguna terakhir',a.penggunaTerakhir):null,
       kv('Nama dan jawatan pengadu',a.pelapor), kv('Dirujuk kepada',a.dirujukKepada), a.tarikhSelesai?kv('Tarikh selesai',fmtD(a.tarikhSelesai)):null),
-    h('div',{style:'margin-top:12px'}, h('div',{class:'eyebrow',style:'margin-bottom:6px'},'Perihal kerosakan'), h('div',{class:'desc'},a.keterangan)));
+    h('div',{style:'margin-top:12px'}, h('div',{class:'eyebrow',style:'margin-bottom:6px'},'Perihal kerosakan'), h('div',{class:'desc'},a.keterangan)),
+    kotakPengadu(a));
   buildKewpa(a);
   $('d-log').replaceChildren(h('div',{class:'eyebrow',style:'margin-bottom:8px'},'Rekod tindakan'),
     h('ol',{class:'timeline'}, log.map(l=>h('li',null, h('div',null,h('b',null,l.status), l.dirujuk?` · dirujuk kepada ${l.dirujuk}`:''),
@@ -389,6 +390,30 @@ function renderButiran(a, log){
       h('div',{class:'meta'},`Tarikh tindakan ${fmtD(l.tarikh)} · direkod ${fmtDT(l.masa)} oleh ${l.oleh||'—'}`)))));
   buildUpdate(a);
 }
+/* ---------- Maklumat semakan untuk pengadu ---------- */
+const pautanSemak = a => `${location.origin}${location.pathname}?no=${encodeURIComponent(a.noAduan)}&kod=${encodeURIComponent(a.kodSemakan)}`;
+const mesejPengadu = a => `Aduan kerosakan anda telah didaftarkan.\nNo. aduan: ${a.noAduan}\nKod semakan: ${a.kodSemakan}\nSemak status di: ${pautanSemak(a)}`;
+function kotakPengadu(a){
+  const box=h('div',{class:'pengadu-box',style:'margin-top:12px'});
+  const jana=h('button',{class:'btn small',type:'button'}, a.kodSemakan?'Jana kod baharu':'Jana kod semakan');
+  jana.addEventListener('click', async ()=>{
+    jana.disabled=true;
+    try{ await api('janaKod',{noAduan:a.noAduan}); toast(a.kodSemakan?'Kod baharu dijana. Kod lama tidak lagi sah.':'Kod semakan dijana.'); await muat(); bukaButiran(a.noAduan,true); }
+    catch(ex){ jana.disabled=false; if(ex.code!=='UNAUTHORIZED') toast(ex.message); }
+  });
+  if (!a.kodSemakan){
+    box.append(h('div',{class:'eyebrow'},'Semakan oleh pengadu'), h('span',{class:'muted',style:'font-size:13.5px'},'Aduan ini belum ada kod semakan.'), bolehTulis()?h('div',null,jana):null);
+    return box;
+  }
+  const salin=h('button',{class:'btn small primary',type:'button'},'Salin mesej untuk pengadu');
+  salin.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(mesejPengadu(a)); toast('Mesej disalin. Tampal dalam WhatsApp atau emel kepada pengadu.'); }catch(e){ toast('Tidak dapat menyalin. Salin No. aduan dan kod secara manual.'); } });
+  box.append(h('div',{class:'eyebrow'},'Semakan oleh pengadu'),
+    h('div',{style:'display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:14px'}, h('span',null,'Kod semakan: ', h('span',{class:'kod'},a.kodSemakan))),
+    h('span',{class:'muted',style:'font-size:13px'},'Berikan No. aduan dan kod ini kepada pengadu. Pengadu boleh semak status tanpa log masuk.'),
+    h('div',{class:'form-actions'}, salin, bolehTulis()?jana:null));
+  return box;
+}
+
 /* ---------- KEW.PA-10 Bahagian II & III ---------- */
 function buildKewpa(a){
   const box=$('d-kewpa');
@@ -462,7 +487,7 @@ function cetakKewpa(a){
     h('table',{class:'pk-tbl'}, h('tbody',null,
       row('','Keputusan',b3.keputusan||'Diluluskan / Tidak Diluluskan'), row('','Ulasan',b3.ulasan), row('','Nama Dan Jawatan',b3.namaJawatan), row('','Tarikh',b3.tarikh?fmtD(b3.tarikh):''))),
     h('div',{class:'pk-sign'},h('span',null,'Tandatangan Ketua Jabatan')),
-    h('div',{class:'pk-foot'},`No. aduan sistem: ${a.noAduan} · Dicetak ${fmtDT(new Date().toISOString())}`));
+    h('div',{class:'pk-foot'},`No. aduan sistem: ${a.noAduan}${a.kodSemakan?` · Kod semakan status: ${a.kodSemakan}`:''} · Dicetak ${fmtDT(new Date().toISOString())}`));
   window.print();
 }
 
@@ -579,9 +604,46 @@ $('s-save').addEventListener('click', async ()=>{
 /* ---------- Render ---------- */
 function renderAll(){ fillYears($('r-tahun'),false); fillYears($('l-tahun'),true); fillFasiliti(); fillLokasi(); renderRingkasan(); renderSenarai(); renderTetapan(); }
 
+/* ---------- Semak status (pengadu, tanpa log masuk) ---------- */
+function showSemak(no, kod){
+  closeDrawer(); screen('screen-semak');
+  if (no!=null) $('sk-no').value=no; if (kod!=null) $('sk-kod').value=kod;
+  $('sk-err').textContent='';
+  if ($('sk-no').value && $('sk-kod').value) semak(); else setTimeout(()=>$('sk-no').focus(),0);
+}
+async function semak(){
+  const err=$('sk-err'), out=$('sk-hasil'); err.textContent='';
+  const no=$('sk-no').value.trim().toUpperCase(), kod=$('sk-kod').value.trim().toUpperCase();
+  $('sk-no').value=no; $('sk-kod').value=kod;
+  if (!/^KRN-\d{4}-\d{4,6}$/.test(no)){ err.textContent='Format No. aduan: KRN-2026-0001.'; out.replaceChildren(); return; }
+  if (!/^[A-Z0-9]{6}$/.test(kod)){ err.textContent='Kod semakan mesti 6 aksara.'; out.replaceChildren(); return; }
+  const btn=$('sk-btn'); btn.disabled=true; btn.textContent='Menyemak…';
+  try{
+    const r=await api('semak',{noAduan:no, kod});
+    const a=r.aduan, kv=(k,v)=>[h('dt',null,k),h('dd',null,v||'—')];
+    const ket = a.status==='Selesai' ? `Kerosakan telah selesai dibaiki pada ${fmtD(a.tarikhSelesai)}.`
+      : a.status==='Dibatalkan' ? 'Aduan ini telah dibatalkan. Hubungi pentadbir fasiliti untuk maklumat lanjut.'
+      : a.status==='Dirujuk' ? `Aduan telah dirujuk${a.dirujukKepada?` kepada ${a.dirujukKepada}`:''} untuk tindakan.`
+      : a.status==='Dalam Tindakan' ? 'Kerja pembaikan sedang dijalankan.' : 'Aduan telah diterima dan sedang menunggu tindakan.';
+    out.replaceChildren(h('div',{class:'sk-res'},
+      h('div',{class:'sk-top'}, h('span',{class:'tagno'},a.noAduan), h('span',{class:'pill '+stCls(a.status)},a.status)),
+      h('div',{style:'font-size:15px;font-weight:500'},ket),
+      h('dl',{class:'kv'}, kv('Fasiliti',a.fasiliti), kv('Lokasi',a.lokasi), kv('Kerosakan',a.jenisAset||a.jenis), kv('Tarikh aduan diterima',fmtD(a.tarikh)),
+        a.kategoriAset==='Aset Alih'?kv('Kelulusan KEW.PA-10',a.keputusanKJ||'Dalam proses'):null, kv('Kemas kini terakhir',fmtD(a.dikemaskini))),
+      (r.sejarah||[]).length ? h('div',null, h('div',{class:'eyebrow',style:'margin-bottom:8px'},'Sejarah status'),
+        h('ol',{class:'timeline'}, r.sejarah.slice().reverse().map(x=>h('li',null,h('b',null,x.status),h('div',{class:'meta'},fmtD(x.tarikh)))))) : null));
+  }catch(ex){ out.replaceChildren(); err.textContent=ex.message; }
+  finally{ btn.disabled=false; btn.textContent='Semak status'; }
+}
+$('sk-form').addEventListener('submit', e=>{ e.preventDefault(); semak(); });
+$('btn-ke-semak').addEventListener('click', ()=>showSemak());
+$('btn-ke-login').addEventListener('click', ()=>{ $('sk-hasil').replaceChildren(); if (ME) screen('screen-app'); else showLogin(); });
+
 /* ---------- Mula ---------- */
 resetForm(); resetUForm();
 (async ()=>{
+  const q=new URLSearchParams(location.search);
+  if (q.get('no') || q.get('kod') || location.hash==='#semak'){ showSemak(q.get('no')||'', q.get('kod')||''); return; }
   if (!configured()){ showLogin(); return; }
   if (!getToken()){ showLogin(); return; }
   try{ const r=await api('saya'); ME=r.user; if (ME.tukarKataLaluan) showTukar(true); else await mulaApp(); }

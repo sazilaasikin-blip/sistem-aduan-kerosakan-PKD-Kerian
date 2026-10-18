@@ -19,11 +19,14 @@ const SESI_SAAT = 6 * 60 * 60;          // sesi tamat selepas 6 jam tanpa aktivi
 const HASH_ULANG = 300;                 // bilangan pusingan hash
 const LOGIN_MAKS = 8;                   // percubaan login maksimum ...
 const LOGIN_TEMPOH_SAAT = 300;          // ... dalam 5 minit
+const SEMAK_MAKS = 10;                  // semakan status awam maksimum setiap no. aduan ...
+const SEMAK_TEMPOH_SAAT = 600;          // ... dalam 10 minit
+const SEMAK_GLOBAL_MAKS = 300;          // had keseluruhan semakan awam dalam 10 minit
 
 const SH = { ADUAN: 'Aduan', LOG: 'Log', PENGGUNA: 'Pengguna', FASILITI: 'Fasiliti', KD: 'KlinikDesa', LOKASI: 'Lokasi', RUJUKAN: 'Rujukan', TETAPAN: 'Tetapan', AUDIT: 'Audit' };
 const HEAD = {
   // Susunan lajur mengikut KEW.PA-10: Bahagian I (pengadu), B2_ = Bahagian II (Pegawai Aset/Teknikal), B3_ = Bahagian III (Ketua Jabatan)
-  Aduan: ['NoAduan', 'TarikhDiterima', 'Status', 'Keutamaan', 'FasilitiPengadu', 'Lokasi', 'LokasiPerincian', 'KategoriKod', 'Kategori',
+  Aduan: ['NoAduan', 'KodSemakan', 'TarikhDiterima', 'Status', 'Keutamaan', 'FasilitiPengadu', 'Lokasi', 'LokasiPerincian', 'KategoriKod', 'Kategori',
     'JenisKerosakan', 'KategoriAset', 'JenisAset', 'NoAset', 'PenggunaTerakhir', 'TarikhKerosakan', 'Keterangan', 'DilaporkanOleh',
     'DirujukKepada', 'TarikhSelesai', 'B2_KosTerdahuluRM', 'B2_AnggaranKosRM', 'B2_SyorUlasan', 'B2_NamaJawatan', 'B2_Tarikh',
     'B3_Keputusan', 'B3_Ulasan', 'B3_NamaJawatan', 'B3_Tarikh', 'DidaftarOleh', 'DidaftarPada', 'DikemaskiniOleh', 'DikemaskiniPada'],
@@ -104,6 +107,7 @@ function appErr_(code, msg) {
 function route_(b) {
   const action = String(b.action || '');
   if (action === 'login') return login_(b);
+  if (action === 'semak') return semak_(b);   // semakan status oleh pengadu: tanpa log masuk, perlu no. aduan + kod semakan
 
   const s = requireAuth_(b.token);
   if (s.tukar && ['tukarKataLaluan', 'logout', 'saya'].indexOf(action) === -1) {
@@ -119,6 +123,7 @@ function route_(b) {
     case 'daftar': perlu_(s, ['admin', 'pentadbir']); return daftar_(s, b.data || {});
     case 'kemaskini': perlu_(s, ['admin', 'pentadbir']); return kemaskini_(s, b.data || {});
     case 'kewpa': perlu_(s, ['admin']); return kewpa_(s, b.data || {});
+    case 'janaKod': perlu_(s, ['admin', 'pentadbir']); return janaKod_(s, b);
     case 'padam': perlu_(s, ['admin']); return padam_(s, b);
     case 'simpanTetapan': perlu_(s, ['admin']); return simpanTetapan_(s, b.data || {});
     case 'senaraiPengguna': perlu_(s, ['admin']); return { pengguna: senaraiPengguna_() };
@@ -260,6 +265,15 @@ function kataLaluanSementara_() {
   return s.slice(0, 6) + '-' + s.slice(6);
 }
 
+/** Kod semakan 6 aksara tanpa aksara mengelirukan (0/O, 1/I/L) */
+function kodSemakanBaru_() {
+  const abjad = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, Utilities.getUuid() + Utilities.getUuid());
+  let s = '';
+  for (let i = 0; i < 6; i++) s += abjad.charAt(((bytes[i] + 256) % 256) % abjad.length);
+  return s;
+}
+
 function semakPolisi_(pw) {
   if (typeof pw !== 'string' || pw.length < 10) throw appErr_('VALIDATION', 'Kata laluan mesti sekurang-kurangnya 10 aksara.');
   if (pw.length > 128) throw appErr_('VALIDATION', 'Kata laluan terlalu panjang.');
@@ -388,7 +402,7 @@ function dalamSkop_(s, fasiliti, peta) {
 
 function aduanAwam_(r) {
   return {
-    noAduan: r.NoAduan, tarikh: r.TarikhDiterima, fasiliti: r.FasilitiPengadu, lokasi: r.Lokasi, lokasiPerincian: r.LokasiPerincian,
+    noAduan: r.NoAduan, kodSemakan: r.KodSemakan, tarikh: r.TarikhDiterima, fasiliti: r.FasilitiPengadu, lokasi: r.Lokasi, lokasiPerincian: r.LokasiPerincian,
     kategoriKod: String(r.KategoriKod), kategori: r.Kategori, jenis: r.JenisKerosakan,
     kategoriAset: r.KategoriAset, jenisAset: r.JenisAset, noAset: r.NoAset, penggunaTerakhir: r.PenggunaTerakhir,
     tarikhKerosakan: r.TarikhKerosakan, keterangan: r.Keterangan, keutamaan: r.Keutamaan, pelapor: r.DilaporkanOleh,
@@ -487,8 +501,9 @@ function daftar_(s, d) {
     props.setProperty('SEQ_' + tahun, String(seq));
     const no = 'KRN-' + tahun + '-' + ('0000' + seq).slice(-4);
     const masa = nowIso_();
+    const kod = kodSemakanBaru_();
     const rec = {
-      NoAduan: no, TarikhDiterima: tarikh, Status: 'Baru', Keutamaan: keutamaan, FasilitiPengadu: fasiliti,
+      NoAduan: no, KodSemakan: kod, TarikhDiterima: tarikh, Status: 'Baru', Keutamaan: keutamaan, FasilitiPengadu: fasiliti,
       Lokasi: lokasi, LokasiPerincian: lokasiPerincian, KategoriKod: kod, Kategori: kat.nama, JenisKerosakan: jenis,
       KategoriAset: kategoriAset, JenisAset: jenisAset, NoAset: noAset, PenggunaTerakhir: penggunaTerakhir,
       TarikhKerosakan: tarikhKerosakan, Keterangan: keterangan, DilaporkanOleh: pelapor, DirujukKepada: '', TarikhSelesai: '',
@@ -497,7 +512,7 @@ function daftar_(s, d) {
     tambahBaris_(SH.ADUAN, rec);
     tambahBaris_(SH.LOG, { NoAduan: no, Masa: masa, TarikhTindakan: tarikh, Status: 'Baru', DirujukKepada: '', Catatan: 'Aduan didaftarkan' + (alih ? ' (aset alih, KEW.PA-10)' : ''), Oleh: s.email });
     audit_(s.email, 'DAFTAR_ADUAN', no);
-    return { noAduan: no };
+    return { noAduan: no, kodSemakan: kod };
   });
 }
 
@@ -577,6 +592,58 @@ function kewpa_(s, d) {
     audit_(s.email, 'KEWPA10', r.a.NoAduan + (keputusan ? ' → ' + keputusan : ''));
     return {};
   });
+}
+
+/** Jana (atau tukar) kod semakan pengadu, contohnya jika kod lama terdedah */
+function janaKod_(s, b) {
+  return withLock_(function () {
+    const r = cariAduan_(b.noAduan);
+    if (!r.a || !dalamSkop_(s, r.a.FasilitiPengadu)) throw appErr_('NOT_FOUND', 'Aduan tidak dijumpai.');
+    const i = r.t.head.indexOf('KodSemakan');
+    if (i === -1) throw appErr_('NOT_SETUP', 'Lajur KodSemakan tiada dalam sheet Aduan. Jalankan Setup awal sistem sekali lagi.');
+    const kod = kodSemakanBaru_();
+    r.t.sh.getRange(r.a._row, i + 1).setValue(kod);
+    audit_(s.email, 'JANA_KOD_SEMAKAN', r.a.NoAduan);
+    return { kodSemakan: kod };
+  });
+}
+
+/** Semakan status oleh pengadu tanpa log masuk. Hanya maklumat asas dipulangkan: tiada nama, emel atau catatan dalaman. */
+function semak_(b) {
+  const no = String(b.noAduan || '').trim().toUpperCase();
+  const kod = String(b.kod || '').trim().toUpperCase();
+  const gagal = function () { return appErr_('SEMAK_GAGAL', 'No. aduan atau kod semakan tidak sepadan. Semak semula dengan pentadbir fasiliti anda.'); };
+  if (!/^KRN-\d{4}-\d{4,6}$/.test(no) || !/^[A-Z2-9]{6}$/.test(kod)) throw gagal();
+
+  const cache = CacheService.getScriptCache();
+  const kGlobal = 'semak_global', kNo = 'semak_' + no;
+  const nGlobal = Number(cache.get(kGlobal) || 0), nNo = Number(cache.get(kNo) || 0);
+  if (nGlobal >= SEMAK_GLOBAL_MAKS || nNo >= SEMAK_MAKS) throw appErr_('RATE_LIMIT', 'Terlalu banyak semakan. Cuba lagi selepas 10 minit.');
+  cache.put(kGlobal, String(nGlobal + 1), SEMAK_TEMPOH_SAAT);
+
+  const a = table_(SH.ADUAN).rows.find(function (r) { return r.NoAduan === no; });
+  if (!a || !a.KodSemakan || !samaRata_(String(a.KodSemakan).toUpperCase(), kod)) {
+    cache.put(kNo, String(nNo + 1), SEMAK_TEMPOH_SAAT);
+    throw gagal();
+  }
+  const sejarah = table_(SH.LOG).rows
+    .filter(function (l) { return l.NoAduan === no; })
+    .sort(function (x, y) { return String(x.Masa).localeCompare(String(y.Masa)); })
+    .reduce(function (acc, l) {
+      // Hanya perubahan status; catatan dan nama pegawai tidak dipaparkan kepada pengadu
+      if (!acc.length || acc[acc.length - 1].status !== l.Status) acc.push({ tarikh: l.TarikhTindakan, status: l.Status });
+      return acc;
+    }, []);
+  return {
+    aduan: {
+      noAduan: a.NoAduan, status: a.Status, tarikh: a.TarikhDiterima, tarikhKerosakan: a.TarikhKerosakan,
+      fasiliti: a.FasilitiPengadu, lokasi: a.Lokasi, kategori: a.Kategori, jenis: a.JenisKerosakan,
+      kategoriAset: a.KategoriAset, jenisAset: a.JenisAset, keutamaan: a.Keutamaan, dirujukKepada: a.DirujukKepada,
+      tarikhSelesai: a.TarikhSelesai, keputusanKJ: a.KategoriAset === ASET_ALIH ? a.B3_Keputusan : '',
+      dikemaskini: String(a.DikemaskiniPada || '').slice(0, 10)
+    },
+    sejarah: sejarah
+  };
 }
 
 function padam_(s, b) {
